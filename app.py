@@ -1,14 +1,19 @@
 import argparse
+import ctypes
 import csv
 import math
+import sys
 import time
 import urllib.request
 from collections import Counter, deque
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import cv2
 import mediapipe as mp
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 
 MODEL_URL = (
@@ -103,28 +108,47 @@ def save_samples(output_path: Path, gesture: str, result) -> int:
     return saved
 
 
+@lru_cache(maxsize=16)
+def load_ui_font(size: int):
+    for font_path in ("C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/arial.ttf"):
+        try:
+            return ImageFont.truetype(font_path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def draw_text(frame, text: str, x: int, y: int, color: tuple[int, int, int]) -> None:
+    font_size = max(16, min(24, frame.shape[1] // 56))
+    font = load_ui_font(font_size)
+    image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    ImageDraw.Draw(image).text((x, y), text, font=font, fill=tuple(reversed(color)))
+    frame[:] = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
+
+
 def draw_label(frame, text: str, x: int, y: int, color: tuple[int, int, int]) -> None:
-    text_size, baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 2)
-    text_width, text_height = text_size
-    x = max(0, min(x, frame.shape[1] - text_width - 10))
+    font_size = max(16, min(22, frame.shape[1] // 58))
+    font = load_ui_font(font_size)
+    image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    painter = ImageDraw.Draw(image)
+    bounds = painter.textbbox((0, 0), text, font=font)
+    text_width = bounds[2] - bounds[0]
+    text_height = bounds[3] - bounds[1]
+    x = max(0, min(x, frame.shape[1] - text_width - 12))
     y = max(text_height + 8, y)
-    cv2.rectangle(
-        frame,
-        (x, y - text_height - 8),
-        (x + text_width + 10, y + baseline + 4),
-        color,
-        cv2.FILLED,
+    top = y - text_height - 8
+    painter.rounded_rectangle(
+        (x, top, x + text_width + 12, y + 2),
+        radius=4,
+        fill=tuple(reversed(color)),
     )
-    cv2.putText(
-        frame,
+    painter.text(
+        (x + 6, top + 3 - bounds[1]),
         text,
-        (x + 5, y),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.55,
-        (255, 255, 255),
-        2,
-        cv2.LINE_AA,
+        font=font,
+        fill=(255, 255, 255),
     )
+    frame[:] = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
 
 
 def point_distance(first, second) -> float:
@@ -179,6 +203,42 @@ def is_open_palm(landmarks) -> bool:
                for mcp, pip, tip in finger_joints)
 
 
+def classify_hand_pose(landmarks) -> tuple[str, float] | None:
+    finger_angles = {
+        "index": joint_angle(landmarks[5], landmarks[6], landmarks[8]),
+        "middle": joint_angle(landmarks[9], landmarks[10], landmarks[12]),
+        "ring": joint_angle(landmarks[13], landmarks[14], landmarks[16]),
+        "pinky": joint_angle(landmarks[17], landmarks[18], landmarks[20]),
+    }
+    extended = {finger: angle >= 150 for finger, angle in finger_angles.items()}
+    curled = {finger: angle <= 135 for finger, angle in finger_angles.items()}
+    thumb_angle = joint_angle(landmarks[2], landmarks[3], landmarks[4])
+    thumb_extension = point_distance(landmarks[4], landmarks[5]) / max(
+        point_distance(landmarks[2], landmarks[5]), 1e-6
+    )
+    thumb_extended = thumb_angle >= 135 and thumb_extension >= 1.12
+
+    pose = None
+    if extended["index"] and extended["middle"] and curled["ring"] and curled["pinky"]:
+        pose = "Victory", (finger_angles["index"] + finger_angles["middle"] + 270 - finger_angles["ring"] - finger_angles["pinky"]) / 540
+    elif extended["index"] and curled["middle"] and curled["ring"] and curled["pinky"]:
+        pose = "Pointing up", (finger_angles["index"] + 405 - finger_angles["middle"] - finger_angles["ring"] - finger_angles["pinky"]) / 540
+    elif all(extended.values()) and thumb_extended:
+        pose = "Open palm", min(1.0, sum(finger_angles.values()) / 720)
+    elif thumb_extended and all(curled.values()) and abs(landmarks[4].y - landmarks[0].y) > 0.04:
+        vertical = landmarks[4].y - landmarks[0].y
+        if vertical < -0.04:
+            pose = "Thumbs up", min(0.95, 0.7 + abs(vertical))
+        elif vertical > 0.04:
+            pose = "Thumbs down", min(0.95, 0.7 + abs(vertical))
+    elif all(curled.values()):
+        pose = "Fist", min(1.0, (540 - sum(finger_angles.values())) / 540 + 0.65)
+
+    if pose is None:
+        return None
+    return pose[0], max(0.55, min(0.99, pose[1]))
+
+
 def detect_six_seven(result, ui_state: dict, timestamp: float) -> float | None:
     hands = result.hand_landmarks
     history = ui_state["six_seven_history"]
@@ -206,9 +266,13 @@ def detect_six_seven(result, ui_state: dict, timestamp: float) -> float | None:
 
 def gesture_label(result, hand_index: int) -> tuple[str, float]:
     if hand_index < len(result.hand_world_landmarks):
-        is_love_you, confidence = is_love_you_posture(result.hand_world_landmarks[hand_index])
+        landmarks = result.hand_world_landmarks[hand_index]
+        is_love_you, confidence = is_love_you_posture(landmarks)
         if is_love_you:
             return "I Love You", confidence
+        pose = classify_hand_pose(landmarks)
+        if pose is not None:
+            return pose
 
     if hand_index >= len(result.gestures) or not result.gestures[hand_index]:
         return "Unknown gesture", 0.0
@@ -308,14 +372,24 @@ def draw_faces(frame, result, ui_state: dict) -> None:
 
     height, width = frame.shape[:2]
     connections = mp.tasks.vision.FaceLandmarksConnections
-    face_edges = connections.FACE_LANDMARKS_TESSELATION
     for face_index, landmarks in enumerate(result.face_landmarks):
         points = [
             (int(landmark.x * width), int(landmark.y * height))
             for landmark in landmarks
         ]
+        if ui_state["full_face_mesh"]:
+            face_edges = connections.FACE_LANDMARKS_TESSELATION
+            line_color = (245, 248, 255)
+        else:
+            face_edges = (
+                connections.FACE_LANDMARKS_FACE_OVAL
+                + connections.FACE_LANDMARKS_LEFT_EYE
+                + connections.FACE_LANDMARKS_RIGHT_EYE
+                + connections.FACE_LANDMARKS_LIPS
+            )
+            line_color = (100, 225, 205)
         for edge in face_edges:
-            cv2.line(frame, points[edge.start], points[edge.end], (245, 248, 255), 1, cv2.LINE_AA)
+            cv2.line(frame, points[edge.start], points[edge.end], line_color, 1, cv2.LINE_AA)
 
         blendshapes = result.face_blendshapes[face_index] if face_index < len(result.face_blendshapes) else []
         expression, confidence = facial_expression(blendshapes)
@@ -340,7 +414,18 @@ def make_recognition_state() -> dict:
         "gesture_history": [deque(maxlen=5), deque(maxlen=5)],
         "six_seven_history": deque(maxlen=36),
         "face_expression_history": [deque(maxlen=3)],
+        "full_face_mesh": True,
     }
+
+
+def should_toggle_full_face_mesh(key_code: int, control_pressed: bool) -> bool:
+    return key_code == ord("1") and control_pressed
+
+
+def is_control_pressed() -> bool:
+    if sys.platform != "win32":
+        return False
+    return bool(ctypes.windll.user32.GetAsyncKeyState(0x11) & 0x8000)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Live hand landmarks and gesture dataset capture")
     parser.add_argument("--camera", type=int, default=0, help="Camera device index (default: 0)")
@@ -421,7 +506,7 @@ def main() -> int:
     frame_index = 0
     object_detections = []
     face_result = None
-    status = "Press 1-5 to save a labeled sample; Q to quit"
+    status = ""
     status_until = 0.0
     recognition_state = make_recognition_state()
     cv2.namedWindow(CAMERA_WINDOW, cv2.WINDOW_NORMAL)
@@ -459,28 +544,21 @@ def main() -> int:
                 draw_hands(frame, result, recognition_state, six_seven_score)
                 draw_objects(frame, object_detections)
                 draw_faces(frame, face_result, recognition_state)
-                cv2.putText(
+                draw_text(
                     frame,
                     f"Hands: {len(result.hand_landmarks)}  Faces: {len(face_result.face_landmarks) if face_result else 0}  Objects: {len(object_detections)}",
-                    (16, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
+                    16,
+                    12,
                     (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
                 )
-                message = status if time.monotonic() < status_until else (
-                    "1 Open palm  2 Fist  3 Peace  4 Pointing  5 Thumbs up  Q Quit"
-                )
-                cv2.putText(
+                if status and time.monotonic() < status_until:
+                    draw_label(frame, status, 16, 58, (40, 120, 35))
+                draw_text(
                     frame,
-                    message,
-                    (16, frame.shape[0] - 42),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.55,
+                    "1 Open palm   2 Fist   3 Peace   4 Pointing   5 Thumbs up   Save sample",
+                    16,
+                    frame.shape[0] - 34,
                     (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
                 )
                 cv2.imshow(CAMERA_WINDOW, frame)
 
@@ -495,7 +573,10 @@ def main() -> int:
                     break
                 if key_code == 27:
                     break
-                if key_code in GESTURES:
+                control_pressed = key_code == ord("1") and is_control_pressed()
+                if should_toggle_full_face_mesh(key_code, control_pressed):
+                    recognition_state["full_face_mesh"] = not recognition_state["full_face_mesh"]
+                elif key_code in GESTURES:
                     gesture = GESTURES[key_code]
                     saved = save_samples(args.output, gesture, result)
                     status = f"Saved {saved} hand(s) as {gesture}" if saved else "No hand detected; sample not saved"

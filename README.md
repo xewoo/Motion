@@ -24,11 +24,11 @@ python app.py
 
 On first launch, the gesture-recognition, EfficientDet Lite0, and Face Landmarker models are downloaded to `models/`. Use `--camera 1` to select another camera device. Press `Q` to close the window.
 
-The app does not change camera properties or apply zoom, brightness, contrast, saturation, or hue adjustments. The mirrored camera frame is passed directly to the recognizers. Press `Q` or `Esc` to exit; closing the camera window also exits the app.
+The app does not change camera properties or apply zoom, brightness, contrast, saturation, or hue adjustments. The mirrored camera frame is passed directly to the recognizers. The full face mesh is shown by default; press `Ctrl+1` to toggle the lighter outline. The bottom hint lists keys `1–5` used to save gesture samples. Press `Q` or `Esc` to exit; closing the camera window also exits the app.
 
-The built-in gesture model recognizes common gestures such as open palm, fist, pointing up, thumbs up/down, victory, and "I Love You". Results are confidence-filtered and smoothed across frames. "I Love You" is accepted only when the thumb, index, and pinky are extended while the middle and ring fingers are curled. The custom "Six-seven (67)" label requires two open hands to alternate vertical positions; hold both hands in view and move them up and down in turns.
+The built-in gesture model recognizes common gestures such as open palm, fist, pointing up, thumbs up/down, victory, and "I Love You". Open palm, fist, pointing, victory, and "I Love You" also use 3D joint angles, which are invariant to palm rotation and help recognize a turned hand. The thumb up/down direction still depends on its vertical direction in the image. The hand must remain visible and tracked; fully occluded fingers cannot be inferred reliably. Results are confidence-filtered and smoothed across frames. "I Love You" is accepted only when the thumb, index, and pinky are extended while the middle and ring fingers are curled. The custom "Six-seven (67)" label requires two open hands to alternate vertical positions; hold both hands in view and move them up and down in turns.
 
-Face Landmarker draws a face outline, eyes, and lips, then estimates expression cues (happy, surprised, sad, angry, neutral) from its blendshape scores. These labels describe visible facial movement and are not a reliable measurement of someone's actual feelings. The object detector recognizes common COCO classes; it does not identify arbitrary objects.
+Face Landmarker draws a face outline, eyes, and lips, then estimates expression cues (happy, surprised, sad, angry, neutral) from its blendshape scores. These labels describe visible facial movement and are not a reliable measurement of someone's actual feelings. Labels use a clear Segoe UI font where available. The object detector recognizes common COCO classes; it does not identify arbitrary objects.
 
 ## Capture a dataset
 
@@ -45,6 +45,8 @@ Show a hand pose to the camera and press the corresponding key. One row is saved
 Each sample contains the label, handedness, and normalized `x`, `y`, `z` coordinates for all 21 landmarks. Capture varied examples for each label to build a dataset for custom gesture training.
 
 ## Run recognition tests
+
+These tests feed sample landmarks into the recognizer without opening the camera. They check gesture rules and catch regressions when the code changes.
 
 ```powershell
 python -m unittest discover -s tests -v
