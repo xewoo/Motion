@@ -163,6 +163,7 @@ class RecognitionTests(unittest.TestCase):
         pose_cases = (
             ({"index", "middle"}, "Victory"),
             ({"index"}, "Pointing up"),
+            ({"middle"}, "Middle finger"),
             ({"index", "middle", "ring", "pinky"}, "Open palm"),
             (set(), "Fist"),
         )
@@ -178,6 +179,36 @@ class RecognitionTests(unittest.TestCase):
                         gestures=[[SimpleNamespace(category_name="None", score=0.0)]],
                     )
                     self.assertEqual(app.gesture_label(result, 0)[0], expected)
+
+    def test_grabbing_is_detected_when_an_open_hand_closes(self):
+        state = app.make_recognition_state()
+        open_result = SimpleNamespace(
+            hand_landmarks=[make_pose({"index", "middle", "ring", "pinky"})],
+            hand_world_landmarks=[make_pose({"index", "middle", "ring", "pinky"})],
+        )
+        closed_hand = make_pose(set())
+        closed_result = SimpleNamespace(
+            hand_landmarks=[closed_hand],
+            hand_world_landmarks=[closed_hand],
+            handedness=[[]],
+            gestures=[[]],
+        )
+
+        self.assertIsNone(app.detect_grabbing(open_result, state)[0])
+        self.assertIsNotNone(app.detect_grabbing(closed_result, state)[0])
+        self.assertIsNotNone(app.detect_grabbing(closed_result, state)[0])
+        with patch.object(app, "draw_label") as draw_label:
+            app.draw_hands(
+                __import__("numpy").zeros((480, 640, 3), dtype="uint8"),
+                closed_result,
+                state,
+                grabbing_scores=[0.9],
+            )
+            self.assertIn("Grabbing", draw_label.call_args.args[1])
+        self.assertIsNone(app.detect_grabbing(open_result, state)[0])
+        self.assertIsNotNone(app.detect_grabbing(closed_result, state)[0])
+
+        self.assertIsNone(app.detect_grabbing(closed_result, app.make_recognition_state())[0])
 
 
 if __name__ == "__main__":

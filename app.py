@@ -219,7 +219,17 @@ def classify_hand_pose(landmarks) -> tuple[str, float] | None:
     thumb_extended = thumb_angle >= 135 and thumb_extension >= 1.12
 
     pose = None
-    if extended["index"] and extended["middle"] and curled["ring"] and curled["pinky"]:
+    if (
+        extended["middle"]
+        and curled["index"]
+        and curled["ring"]
+        and curled["pinky"]
+    ):
+        pose = "Middle finger", (
+            finger_angles["middle"] + 405
+            - finger_angles["index"] - finger_angles["ring"] - finger_angles["pinky"]
+        ) / 540
+    elif extended["index"] and extended["middle"] and curled["ring"] and curled["pinky"]:
         pose = "Victory", (finger_angles["index"] + finger_angles["middle"] + 270 - finger_angles["ring"] - finger_angles["pinky"]) / 540
     elif extended["index"] and curled["middle"] and curled["ring"] and curled["pinky"]:
         pose = "Pointing up", (finger_angles["index"] + 405 - finger_angles["middle"] - finger_angles["ring"] - finger_angles["pinky"]) / 540
@@ -237,6 +247,36 @@ def classify_hand_pose(landmarks) -> tuple[str, float] | None:
     if pose is None:
         return None
     return pose[0], max(0.55, min(0.99, pose[1]))
+
+
+def detect_grabbing(result, ui_state: dict) -> list[float | None]:
+    hands = result.hand_world_landmarks or result.hand_landmarks
+    states = ui_state["grabbing_states"]
+    while len(states) < len(hands):
+        states.append({"open": False, "active": False})
+    if not hands:
+        for state in states:
+            state["open"] = False
+            state["active"] = False
+        return []
+
+    scores: list[float | None] = [None] * len(hands)
+    for hand_index, landmarks in enumerate(hands):
+        state = states[hand_index]
+        pose = classify_hand_pose(landmarks)
+        if pose is not None and pose[0] == "Open palm":
+            state["open"] = True
+            state["active"] = False
+        elif pose is not None and pose[0] == "Fist":
+            if state["open"]:
+                state["active"] = True
+                state["open"] = False
+            if state["active"]:
+                scores[hand_index] = min(0.99, 0.72 + (pose[1] - 0.55) * 0.5)
+        else:
+            state["open"] = False
+            state["active"] = False
+    return scores
 
 
 def detect_six_seven(result, ui_state: dict, timestamp: float) -> float | None:
@@ -287,7 +327,13 @@ def gesture_label(result, hand_index: int) -> tuple[str, float]:
     return "No known gesture", 0.0
 
 
-def draw_hands(frame, result, ui_state: dict, six_seven_score: float | None = None) -> None:
+def draw_hands(
+    frame,
+    result,
+    ui_state: dict,
+    six_seven_score: float | None = None,
+    grabbing_scores: list[float | None] | None = None,
+) -> None:
     height, width = frame.shape[:2]
     for hand_index, landmarks in enumerate(result.hand_landmarks):
         points = [
@@ -305,6 +351,8 @@ def draw_hands(frame, result, ui_state: dict, six_seven_score: float | None = No
         gesture, score = gesture_label(result, hand_index)
         if six_seven_score is not None:
             gesture, score = "Six-seven (67)", six_seven_score
+        elif grabbing_scores and hand_index < len(grabbing_scores) and grabbing_scores[hand_index] is not None:
+            gesture, score = "Grabbing", grabbing_scores[hand_index]
         else:
             history = ui_state["gesture_history"][hand_index]
             history.append((gesture, score))
@@ -413,6 +461,7 @@ def make_recognition_state() -> dict:
     return {
         "gesture_history": [deque(maxlen=5), deque(maxlen=5)],
         "six_seven_history": deque(maxlen=36),
+        "grabbing_states": [],
         "face_expression_history": [deque(maxlen=3)],
         "full_face_mesh": True,
     }
@@ -539,9 +588,10 @@ def main() -> int:
                 if frame_index % FACE_DETECTION_INTERVAL == 0:
                     face_result = face_landmarker.detect_for_video(image, timestamp_ms)
                 six_seven_score = detect_six_seven(result, recognition_state, time.monotonic())
+                grabbing_scores = detect_grabbing(result, recognition_state)
                 frame_index += 1
 
-                draw_hands(frame, result, recognition_state, six_seven_score)
+                draw_hands(frame, result, recognition_state, six_seven_score, grabbing_scores)
                 draw_objects(frame, object_detections)
                 draw_faces(frame, face_result, recognition_state)
                 draw_text(
