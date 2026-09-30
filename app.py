@@ -4,11 +4,13 @@ import csv
 import math
 import sys
 import time
+import tkinter as tk
 import urllib.request
 from collections import Counter, deque
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from tkinter import messagebox
 
 import cv2
 import mediapipe as mp
@@ -48,6 +50,11 @@ OBJECT_DETECTION_INTERVAL = 3
 FACE_DETECTION_INTERVAL = 2
 GESTURE_SCORE_THRESHOLD = 0.55
 CAMERA_WINDOW = "Gesture Detector"
+MAX_CAMERA_INDEX = 10
+CAMERA_BACKENDS = (
+    (cv2.CAP_MSMF, "Media Foundation"),
+    (cv2.CAP_DSHOW, "DirectShow"),
+)
 HAND_CONNECTIONS = (
     (0, 1), (1, 2), (2, 3), (3, 4),
     (0, 5), (5, 6), (6, 7), (7, 8),
@@ -475,9 +482,109 @@ def is_control_pressed() -> bool:
     if sys.platform != "win32":
         return False
     return bool(ctypes.windll.user32.GetAsyncKeyState(0x11) & 0x8000)
+
+
+def available_cameras() -> list[tuple[int, int, str]]:
+    backends = CAMERA_BACKENDS if sys.platform == "win32" else ((cv2.CAP_ANY, "Default"),)
+    cameras = []
+    for backend, backend_name in backends:
+        for index in range(MAX_CAMERA_INDEX):
+            camera = cv2.VideoCapture(index, backend)
+            if camera.isOpened():
+                cameras.append((index, backend, backend_name))
+            camera.release()
+    return cameras
+
+
+def select_camera() -> tuple[int, int] | None:
+    cameras = available_cameras()
+    if not cameras:
+        messagebox.showerror(
+            "Camera selection",
+            "No cameras were found. Check that the phone camera is active in Link to Windows "
+            "and that Windows camera access is enabled.",
+        )
+        return None
+
+    selected_camera: tuple[int, int] | None = cameras[0][:2]
+    root = tk.Tk()
+    root.title("Select camera")
+    root.resizable(False, False)
+    root.attributes("-topmost", True)
+
+    tk.Label(
+        root,
+        text="For Link to Windows, try Media Foundation first.",
+    ).pack(
+        padx=20,
+        pady=(16, 8),
+    )
+    camera_frame = tk.Frame(root)
+    camera_scrollbar = tk.Scrollbar(camera_frame)
+    camera_list = tk.Listbox(
+        camera_frame,
+        height=min(len(cameras), 10),
+        width=40,
+        yscrollcommand=camera_scrollbar.set,
+    )
+    for index, _backend, backend_name in cameras:
+        camera_list.insert(tk.END, f"Camera {index} - {backend_name}")
+    camera_list.selection_set(0)
+    camera_list.pack(side=tk.LEFT)
+    camera_scrollbar.config(command=camera_list.yview)
+    camera_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    camera_frame.pack(padx=20)
+
+    def confirm_selection() -> None:
+        nonlocal selected_camera
+        selection = camera_list.curselection()
+        if selection:
+            selected_camera = cameras[selection[0]][:2]
+        root.destroy()
+
+    def cancel_selection() -> None:
+        nonlocal selected_camera
+        selected_camera = None
+        root.destroy()
+
+    buttons = tk.Frame(root)
+    buttons.pack(pady=16)
+    tk.Button(buttons, text="Connect", width=12, command=confirm_selection).pack(
+        side=tk.LEFT,
+        padx=5,
+    )
+    tk.Button(buttons, text="Cancel", width=12, command=cancel_selection).pack(
+        side=tk.LEFT,
+        padx=5,
+    )
+    camera_list.bind("<Double-Button-1>", lambda *_: confirm_selection())
+    root.protocol("WM_DELETE_WINDOW", cancel_selection)
+    root.mainloop()
+    return selected_camera
+
+
+def open_camera(camera_index: int, backend: int | None = None):
+    backends = (
+        ((backend, ""),)
+        if backend is not None
+        else CAMERA_BACKENDS if sys.platform == "win32" else ((cv2.CAP_ANY, "Default"),)
+    )
+    for candidate, _name in backends:
+        camera = cv2.VideoCapture(camera_index, candidate)
+        if camera.isOpened():
+            return camera
+        camera.release()
+    return None
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Live hand landmarks and gesture dataset capture")
-    parser.add_argument("--camera", type=int, default=0, help="Camera device index (default: 0)")
+    parser.add_argument(
+        "--camera",
+        type=int,
+        default=None,
+        help="Camera device index (skips the startup selection dialog)",
+    )
     parser.add_argument(
         "--model",
         type=Path,
@@ -507,6 +614,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.camera is None:
+        camera_selection = select_camera()
+        if camera_selection is None:
+            return 0
+        camera_index, camera_backend = camera_selection
+    else:
+        camera_index, camera_backend = args.camera, None
+
     try:
         ensure_model(args.model, MODEL_URL, "Gesture Recognizer")
         ensure_model(args.object_model, OBJECT_MODEL_URL, "EfficientDet Lite0")
@@ -515,12 +630,9 @@ def main() -> int:
         print(f"Could not download the model: {error}")
         return 1
 
-    camera = cv2.VideoCapture(args.camera, cv2.CAP_DSHOW)
-    if not camera.isOpened():
-        camera.release()
-        camera = cv2.VideoCapture(args.camera)
-    if not camera.isOpened():
-        print(f"Could not open camera {args.camera}. Check the device index and permissions.")
+    camera = open_camera(camera_index, camera_backend)
+    if camera is None:
+        print(f"Could not open camera {camera_index}. Check the device index and permissions.")
         return 1
 
     gesture_options = mp.tasks.vision.GestureRecognizerOptions(
@@ -557,6 +669,8 @@ def main() -> int:
     face_result = None
     status = ""
     status_until = 0.0
+    camera_wait_started = time.monotonic()
+    dark_frame_started = None
     recognition_state = make_recognition_state()
     cv2.namedWindow(CAMERA_WINDOW, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(CAMERA_WINDOW, 960, 540)
@@ -573,8 +687,33 @@ def main() -> int:
 
                 success, frame = camera.read()
                 if not success:
-                    print("Could not read a frame from the camera.")
-                    break
+                    dark_frame_started = None
+                    frame = np.zeros((540, 960, 3), dtype=np.uint8)
+                    draw_text(
+                        frame,
+                        "Waiting for camera stream... Start the camera in Link to Windows.",
+                        24,
+                        250,
+                        (255, 255, 255),
+                    )
+                    cv2.imshow(CAMERA_WINDOW, frame)
+                    key = cv2.waitKeyEx(100) & 0xFF
+                    if key in (ord("q"), 27):
+                        break
+                    if time.monotonic() - camera_wait_started > 30:
+                        print(
+                            f"Camera {camera_index} opened but produced no frames. "
+                            "Check Link to Windows and try the Media Foundation entry."
+                        )
+                        break
+                    continue
+                camera_wait_started = time.monotonic()
+
+                if sum(cv2.mean(frame)[:3]) / 3 < 2:
+                    if dark_frame_started is None:
+                        dark_frame_started = time.monotonic()
+                else:
+                    dark_frame_started = None
 
                 frame = cv2.flip(frame, 1)
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -603,6 +742,14 @@ def main() -> int:
                 )
                 if status and time.monotonic() < status_until:
                     draw_label(frame, status, 16, 58, (40, 120, 35))
+                if dark_frame_started and time.monotonic() - dark_frame_started > 5:
+                    draw_label(
+                        frame,
+                        "Black video? Check that Link to Windows has finished connecting.",
+                        16,
+                        92,
+                        (30, 110, 220),
+                    )
                 draw_text(
                     frame,
                     "1 Open palm   2 Fist   3 Peace   4 Pointing   5 Thumbs up   Save sample",

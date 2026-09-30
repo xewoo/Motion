@@ -51,3 +51,7 @@ These tests feed sample landmarks into the recognizer without opening the camera
 ```powershell
 python -m unittest discover -s tests -v
 ```
+
+## Browser version
+
+A browser-based copy processes webcam video locally in real time. Start the built-in server from the project root with `py -m http.server 8000`, then open [http://localhost:8000/browser/](http://localhost:8000/browser/) in Chrome or Edge and allow camera access. The page downloads its MediaPipe runtime and models from their CDNs on first use; no video is uploaded. See [browser/README.md](browser/README.md) for details.
