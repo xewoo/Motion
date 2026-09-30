@@ -141,10 +141,10 @@ function enableCameraDragging() {
       offsetX: event.clientX - panelRect.left,
       offsetY: event.clientY - panelRect.top,
     };
-    cameraPanel.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
   });
 
-  cameraHeader.addEventListener('pointermove', (event) => {
+  window.addEventListener('pointermove', (event) => {
     if (!state.dragState) return;
 
     const panelRect = cameraPanel.getBoundingClientRect();
@@ -162,9 +162,8 @@ function enableCameraDragging() {
   const stopDragging = () => {
     state.dragState = null;
   };
-  cameraHeader.addEventListener('pointerup', stopDragging);
-  cameraHeader.addEventListener('pointercancel', stopDragging);
-  cameraHeader.addEventListener('lostpointercapture', stopDragging);
+  window.addEventListener('pointerup', stopDragging);
+  window.addEventListener('pointercancel', stopDragging);
 }
 
 function applyDifficulty(difficulty) {
