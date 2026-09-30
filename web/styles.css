@@ -350,19 +350,17 @@ body {
 
 .camera-panel {
   position: absolute;
-  right: 32px;
-  bottom: 28px;
-  width: 260px;
-  height: 200px;
-  z-index: 11;
+  left: 50%;
+  bottom: 18px;
+  width: min(500px, calc(100% - 36px));
+  height: 132px;
+  z-index: 14;
   overflow: hidden;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.42), 0 0 32px rgba(123, 241, 179, 0.08);
   user-select: none;
-}
-
-.camera-panel.dragging {
-  cursor: grabbing;
-  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.36);
+  transform: translateX(-50%);
+  background: rgba(5, 16, 24, 0.92);
+  border-color: rgba(123, 241, 179, 0.28);
 }
 
 .camera-header {
@@ -375,7 +373,15 @@ body {
   font-size: 0.62rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  cursor: grab;
+  min-height: 34px;
+}
+
+.tracking-status {
+  margin-left: auto;
+  margin-right: 10px;
+  color: #9bffd0;
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
 }
 
 .pause-button {
@@ -397,8 +403,11 @@ body {
 .camera-stage {
   position: relative;
   width: 100%;
-  height: calc(100% - 38px);
+  height: calc(100% - 34px);
   overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(123, 241, 179, 0.14), transparent 44%),
+    linear-gradient(90deg, rgba(123, 241, 179, 0.03), rgba(89, 188, 255, 0.09), rgba(123, 241, 179, 0.03));
 }
 
 #cameraFeed,
@@ -412,25 +421,126 @@ body {
 }
 
 #cameraFeed {
-  transform: scaleX(-1);
+  opacity: 0;
+  pointer-events: none;
 }
 
 #gestureCanvas {
   pointer-events: none;
+  transform: scaleX(-1);
+  filter: drop-shadow(0 0 6px rgba(123, 241, 179, 0.9));
 }
 
 .camera-overlay {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 12px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.38);
-  color: #eaf5ff;
+  bottom: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #d8fff0;
   text-align: center;
   font-weight: 700;
+  font-size: 0.72rem;
   letter-spacing: 0.04em;
+}
+
+.start-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 28%, rgba(89, 188, 255, 0.12), transparent 33%), rgba(3, 9, 15, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.start-panel {
+  width: min(580px, 100%);
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid rgba(243, 201, 128, 0.38);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(17, 36, 46, 0.97), rgba(6, 15, 23, 0.98));
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.58), inset 0 1px rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.eyebrow {
+  color: #9bffd0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.start-panel h1 {
+  margin: 12px 0;
+  color: var(--temple-gold);
+  font-size: clamp(2.2rem, 6vw, 4.2rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.start-panel p {
+  max-width: 440px;
+  margin: 0 auto;
+  color: #c1d2df;
+  line-height: 1.55;
+}
+
+.gesture-guide {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 24px 0;
+}
+
+.gesture-guide span {
+  padding: 7px 10px;
+  border: 1px solid rgba(137, 223, 255, 0.2);
+  border-radius: 999px;
+  color: #d4efff;
+  background: rgba(137, 223, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.start-button {
+  width: min(280px, 100%);
+  padding: 14px 24px;
+  border: 1px solid rgba(243, 201, 128, 0.8);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f3c980, #d8914c);
+  box-shadow: 0 10px 30px rgba(243, 201, 128, 0.2);
+  color: #10202a;
+  font: inherit;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.start-button:hover { transform: translateY(-2px); filter: brightness(1.08); }
+
+.start-panel small {
+  display: block;
+  margin-top: 14px;
+  color: #8ea7b8;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 700px) {
+  .hud { left: 12px; right: 12px; gap: 8px; }
+  .hud-block { padding: 9px 10px; }
+  .hud-center { gap: 8px; }
+  .combo-box, .score-box { min-width: 72px; padding: 8px; }
+  .arena { inset: 96px 0 0; }
+  .lane-wrap { width: calc(100% - 28px); bottom: 156px; height: 190px; }
+  .camera-panel { bottom: 10px; height: 126px; }
 }
 
 .attack-burst {

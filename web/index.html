@@ -62,7 +62,8 @@
 
       <aside class="camera-panel">
         <div class="camera-header">
-          <span>Player Camera</span>
+          <span>Hand tracker</span>
+          <span id="trackingStatus" class="tracking-status">Camera off</span>
           <button id="pauseGameButton" class="pause-button" type="button" aria-label="Pause game">Pause</button>
         </div>
         <div class="camera-stage">
@@ -70,17 +71,29 @@
           <canvas id="gestureCanvas"></canvas>
         </div>
         <div class="camera-overlay">
-          <span id="currentGestureLabel">Waiting...</span>
+          <span id="currentGestureLabel">Show your hand to begin</span>
         </div>
       </aside>
 
       <div id="combatFeedback" class="combat-feedback" aria-live="polite" aria-atomic="true"></div>
       <section id="gameOverScreen" class="game-over-screen hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
         <div class="game-over-panel">
-          <span class="label">Temple fallen</span>
+          <span id="gameOverEyebrow" class="label">Temple fallen</span>
           <h1 id="gameOverTitle">Run ended</h1>
           <p>Final score <strong id="finalScore">0</strong></p>
           <button id="restartGameButton" class="restart-button" type="button">Play again</button>
+        </div>
+      </section>
+      <section id="startScreen" class="start-screen" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+        <div class="start-panel">
+          <span class="eyebrow">Gesture rhythm game</span>
+          <h1 id="startTitle">Defend the Temple</h1>
+          <p>Use your hand as the controller. Match the requested gesture when the note reaches the center line.</p>
+          <div class="gesture-guide" aria-label="Supported gestures">
+            <span>Open Palm</span><span>Fist</span><span>Victory</span><span>Pointing</span><span>Thumbs Up</span>
+          </div>
+          <button id="startGameButton" class="start-button" type="button">Start game</button>
+          <small>Your camera will be requested only after you press Start game.</small>
         </div>
       </section>
     </div>

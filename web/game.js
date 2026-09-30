@@ -13,6 +13,7 @@ const state = {
   wave: 1,
   isPaused: false,
   gameOver: false,
+  hasStarted: false,
   dragState: null,
   nextNotePending: false,
   feedbackTimeout: null,
@@ -36,8 +37,15 @@ const combatFeedback = typeof document !== 'undefined' ? document.getElementById
 const gameOverScreen = typeof document !== 'undefined' ? document.getElementById('gameOverScreen') : null;
 const finalScore = typeof document !== 'undefined' ? document.getElementById('finalScore') : null;
 const restartButton = typeof document !== 'undefined' ? document.getElementById('restartGameButton') : null;
+const gameOverTitle = typeof document !== 'undefined' ? document.getElementById('gameOverTitle') : null;
+const gameOverEyebrow = typeof document !== 'undefined' ? document.getElementById('gameOverEyebrow') : null;
 const gestureCanvas = typeof document !== 'undefined' ? document.getElementById('gestureCanvas') : null;
 const gestureCtx = gestureCanvas ? gestureCanvas.getContext('2d') : null;
+const startScreen = typeof document !== 'undefined' ? document.getElementById('startScreen') : null;
+const startButton = typeof document !== 'undefined' ? document.getElementById('startGameButton') : null;
+const trackingStatus = typeof document !== 'undefined' ? document.getElementById('trackingStatus') : null;
+let mediaPipeAttached = false;
+let cameraStarted = false;
 
 const gestures = ['Open Palm', 'Fist', 'Victory', 'Pointing', 'Thumbs Up'];
 const HAND_CONNECTIONS = [
@@ -83,7 +91,7 @@ function setPaused(nextPaused) {
 }
 
 function togglePause() {
-  if (state.gameOver) return;
+  if (state.gameOver || !state.hasStarted) return;
   setPaused(!state.isPaused);
 }
 
@@ -102,68 +110,6 @@ function ensureCanvasSize() {
   gestureCanvas.height = cameraFeed.videoHeight || 240;
 }
 
-function attachCameraDrag() {
-  if (!cameraPanel || !cameraHeader || !cameraFeed) return;
-
-  const clampPanel = () => {
-    const parentRect = cameraPanel.parentElement?.getBoundingClientRect();
-    if (!parentRect) return;
-
-    const maxLeft = parentRect.width - cameraPanel.offsetWidth - 14;
-    const maxTop = parentRect.height - cameraPanel.offsetHeight - 14;
-    const left = clamp(cameraPanel.offsetLeft, 10, Math.max(10, maxLeft));
-    const top = clamp(cameraPanel.offsetTop, 12, Math.max(12, maxTop));
-
-    cameraPanel.style.left = `${left}px`;
-    cameraPanel.style.top = `${top}px`;
-  };
-
-  const onPointerMove = (event) => {
-    if (!state.dragState) return;
-
-    const deltaX = event.clientX - state.dragState.startX;
-    const deltaY = event.clientY - state.dragState.startY;
-    cameraPanel.style.left = `${state.dragState.startLeft + deltaX}px`;
-    cameraPanel.style.top = `${state.dragState.startTop + deltaY}px`;
-    cameraPanel.style.right = 'auto';
-    cameraPanel.style.bottom = 'auto';
-    clampPanel();
-  };
-
-  cameraHeader.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('button')) return;
-
-    state.dragState = {
-      startX: event.clientX,
-      startY: event.clientY,
-      startLeft: cameraPanel.offsetLeft,
-      startTop: cameraPanel.offsetTop,
-    };
-    cameraPanel.classList.add('dragging');
-    cameraHeader.setPointerCapture(event.pointerId);
-  });
-
-  cameraHeader.addEventListener('pointermove', onPointerMove);
-  cameraHeader.addEventListener('pointerup', () => {
-    state.dragState = null;
-    cameraPanel.classList.remove('dragging');
-  });
-  cameraHeader.addEventListener('pointerleave', () => {
-    state.dragState = null;
-    cameraPanel.classList.remove('dragging');
-  });
-
-  cameraPanel.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('button')) return;
-    if (!cameraPanel.style.left) {
-      cameraPanel.style.left = `${cameraPanel.offsetLeft}px`;
-      cameraPanel.style.top = `${cameraPanel.offsetTop}px`;
-      cameraPanel.style.right = 'auto';
-      cameraPanel.style.bottom = 'auto';
-    }
-  });
-}
-
 function updateHud() {
   if (comboEl) comboEl.textContent = `${state.combo}x`;
   if (scoreEl) scoreEl.textContent = String(state.score);
@@ -178,7 +124,7 @@ function setPrompt(gesture) {
 }
 
 function spawnNote() {
-  if (!lane || state.gameOver) return;
+  if (!lane || state.gameOver || !state.hasStarted) return;
 
   const note = document.createElement('div');
   const gesture = gestures[Math.floor(Math.random() * gestures.length)];
@@ -209,7 +155,7 @@ function removeCurrentNote() {
 
 function scheduleNextNote() {
   setTimeout(() => {
-    if (state.gameOver) return;
+    if (state.gameOver || !state.hasStarted) return;
     if (!state.currentNote && !state.isPaused) {
       spawnNote();
     } else if (!state.currentNote) {
@@ -267,17 +213,22 @@ function hitSuccess(diff) {
 
   if (state.enemyHealth === 0) {
     state.wave += 1;
-    state.enemyHealth = 100;
     state.score += 500;
+    if (state.wave > 3) {
+      updateHud();
+      finishGame(true);
+      return;
+    }
+    state.enemyHealth = 100;
   }
 
   updateHud();
 }
 
-function failHit() {
+function failHit(message = 'MISS') {
   state.combo = 0;
   state.templeHealth = Math.max(0, state.templeHealth - 8);
-  showCombatFeedback('MISS', 'miss');
+  showCombatFeedback(message, 'miss');
   const temple = document.querySelector('.temple');
   if (temple) {
     temple.classList.remove('temple-hit');
@@ -301,7 +252,7 @@ function failHit() {
   }
 }
 
-function finishGame() {
+function finishGame(isVictory = false) {
   state.gameOver = true;
   state.isPaused = true;
   state.nextNotePending = false;
@@ -309,6 +260,8 @@ function finishGame() {
   setTimingCue(false);
   if (pauseButton) pauseButton.disabled = true;
   if (finalScore) finalScore.textContent = String(state.score);
+  if (gameOverEyebrow) gameOverEyebrow.textContent = isVictory ? 'Temple protected' : 'Temple fallen';
+  if (gameOverTitle) gameOverTitle.textContent = isVictory ? 'Victory!' : 'Run ended';
   gameOverScreen?.classList.remove('hidden');
 }
 
@@ -322,6 +275,7 @@ function restartGame() {
   state.nextNotePending = false;
   state.gameOver = false;
   state.isPaused = false;
+  state.hasStarted = true;
   if (pauseButton) {
     pauseButton.disabled = false;
     pauseButton.textContent = 'Pause';
@@ -335,7 +289,7 @@ function restartGame() {
 
 function handleGestureInput(gesture) {
   if (!gesture) return;
-  if (state.isPaused) return;
+  if (!state.hasStarted || state.isPaused) return;
   const now = performance.now();
 
   if (!state.currentNote) {
@@ -345,7 +299,7 @@ function handleGestureInput(gesture) {
   const diff = Math.abs(now - state.currentNote.dueAt);
   if (gesture !== state.currentNote.gesture) {
     if (diff <= state.hitWindowMs) {
-      failHit();
+      failHit(`Wrong gesture - show ${state.currentNote.gesture}`);
     }
     return;
   }
@@ -377,13 +331,13 @@ function updateNotePosition(now) {
     element.remove();
     state.currentNote = null;
     setTimingCue(false);
-    failHit();
+    failHit(`Too late - prepare ${state.currentGesture} earlier`);
     scheduleNextNote();
   }
 }
 
 function gameLoop(now) {
-  if (state.gameOver) return;
+  if (state.gameOver || !state.hasStarted) return;
   if (!state.isPaused) {
     if (state.nextNotePending && !state.currentNote) {
       state.nextNotePending = false;
@@ -502,13 +456,17 @@ function onHandResults(results) {
 
   if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
     gestureCtx.clearRect(0, 0, gestureCanvas.width, gestureCanvas.height);
+    if (trackingStatus) trackingStatus.textContent = 'No hand detected';
     return;
   }
+  if (gameOverEyebrow) gameOverEyebrow.textContent = 'Temple fallen';
+  if (gameOverTitle) gameOverTitle.textContent = 'Run ended';
 
   const imageLandmarks = results.multiHandLandmarks[0];
   const poseLandmarks = results.multiHandWorldLandmarks?.[0] ?? imageLandmarks;
   const detectedGesture = classifyHand(poseLandmarks);
   drawLandmarks(imageLandmarks);
+  if (trackingStatus) trackingStatus.textContent = detectedGesture ? 'Hand detected' : 'Adjust your hand';
 
   if (detectedGesture) {
     state.lastDetectedGesture = detectedGesture;
@@ -518,10 +476,13 @@ function onHandResults(results) {
       handleGestureInput(detectedGesture);
       state.lastKnownGestureTime = now;
     }
+  } else if (currentGestureLabel) {
+    currentGestureLabel.textContent = 'Open your palm or make a clear fist';
   }
 }
 
 function attachMediaPipe() {
+  if (mediaPipeAttached) return;
   const video = cameraFeed;
   const { Hands } = window;
   const { Camera } = window;
@@ -543,6 +504,7 @@ function attachMediaPipe() {
   });
 
   hands.onResults(onHandResults);
+  mediaPipeAttached = true;
 
   const camera = new Camera(video, {
     onFrame: async () => {
@@ -556,7 +518,8 @@ function attachMediaPipe() {
 }
 
 async function startCamera() {
-  if (!cameraFeed) return;
+  if (!cameraFeed || cameraStarted) return;
+  cameraStarted = true;
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -564,18 +527,26 @@ async function startCamera() {
 
     cameraFeed.onloadedmetadata = () => {
       ensureCanvasSize();
-      if (cameraPanel && !cameraPanel.style.left) {
-        cameraPanel.style.left = `${Math.max(14, window.innerWidth - cameraPanel.offsetWidth - 32)}px`;
-        cameraPanel.style.top = `${Math.max(18, window.innerHeight - cameraPanel.offsetHeight - 36)}px`;
-        cameraPanel.style.right = 'auto';
-        cameraPanel.style.bottom = 'auto';
-      }
       attachMediaPipe();
     };
   } catch (error) {
+    cameraStarted = false;
     console.warn('Camera access denied or unavailable; demo mode remains active.', error);
-    if (currentGestureLabel) currentGestureLabel.textContent = 'Demo mode';
+    if (currentGestureLabel) currentGestureLabel.textContent = 'Keyboard demo mode';
+    if (trackingStatus) trackingStatus.textContent = 'Camera unavailable';
   }
+}
+
+function startGame() {
+  if (state.hasStarted) return;
+  state.hasStarted = true;
+  state.isPaused = false;
+  startScreen?.classList.add('hidden');
+  updateHud();
+  setPrompt(gestures[0]);
+  spawnNote();
+  requestAnimationFrame(gameLoop);
+  startCamera();
 }
 
 if (typeof window !== 'undefined') {
@@ -609,22 +580,15 @@ if (restartButton) {
   restartButton.addEventListener('click', restartGame);
 }
 
+if (startButton) {
+  startButton.addEventListener('click', startGame);
+}
+
 function bootGame() {
   if (!lane || !promptEl || !comboEl || !scoreEl || !templeHealthEl || !enemyHealthEl || !cameraFeed || !currentGestureLabel || !attackBurst || !gestureCanvas) return;
 
-  attachCameraDrag();
-  if (cameraPanel) {
-    cameraPanel.style.left = `${Math.max(14, window.innerWidth - cameraPanel.offsetWidth - 32)}px`;
-    cameraPanel.style.top = `${Math.max(18, window.innerHeight - cameraPanel.offsetHeight - 36)}px`;
-    cameraPanel.style.right = 'auto';
-    cameraPanel.style.bottom = 'auto';
-  }
-
   updateHud();
   setPrompt(gestures[0]);
-  spawnNote();
-  requestAnimationFrame(gameLoop);
-  startCamera();
 }
 
 if (typeof document !== 'undefined') {
