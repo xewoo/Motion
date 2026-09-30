@@ -262,7 +262,7 @@ body {
   bottom: 40px;
   transform: translateX(-50%);
   width: min(1100px, calc(100% - clamp(48px, 8vw, 112px)));
-  height: min(420px, 58dvh);
+  height: min(560px, 66dvh);
   border-radius: 18px;
   background: rgba(13, 27, 35, 0.46);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -457,6 +457,7 @@ body {
   padding: 24px;
   background: radial-gradient(circle at 50% 28%, rgba(89, 188, 255, 0.12), transparent 33%), rgba(3, 9, 15, 0.72);
   backdrop-filter: blur(8px);
+  overflow-y: auto;
 }
 
 .start-panel {
@@ -504,6 +505,124 @@ body {
   margin: 0 0 22px;
   padding: 0;
   border: 0;
+}
+
+.game-shell.training .prompt-box {
+  display: none;
+}
+
+.recognition-note {
+  margin: -8px auto 20px !important;
+  color: #9db9c9 !important;
+  font-size: 0.72rem;
+  line-height: 1.4 !important;
+}
+
+.progress-panel {
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid rgba(123, 241, 179, 0.2);
+  border-radius: 12px;
+  background: rgba(123, 241, 179, 0.05);
+}
+
+.best-score {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.best-score strong {
+  margin-left: 6px;
+  color: #baffdb;
+  font-size: 1.15rem;
+}
+
+.progress-panel h2,
+.game-over-records h2 {
+  margin: 10px 0 6px;
+  color: #d9ffed;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.records-list {
+  display: grid;
+  gap: 4px;
+  max-height: 104px;
+  margin: 0;
+  padding-left: 24px;
+  overflow-y: auto;
+  color: #c1d2df;
+  font-size: 0.74rem;
+  text-align: left;
+}
+
+.game-over-records {
+  margin: 18px 0 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: start center;
+  padding: clamp(96px, 14vh, 140px) 24px 24px;
+  pointer-events: none;
+}
+
+.tutorial-panel {
+  width: min(470px, 100%);
+  padding: 22px 26px;
+  border: 1px solid rgba(123, 241, 179, 0.36);
+  border-radius: 18px;
+  background: rgba(5, 17, 25, 0.88);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
+  text-align: center;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.tutorial-panel h2 {
+  margin: 8px 0;
+  color: var(--temple-gold);
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+}
+
+.tutorial-panel p {
+  margin: 0;
+  color: #c1d2df;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.tutorial-panel.correct {
+  border-color: #baffdb;
+  box-shadow: 0 0 0 5px rgba(123, 241, 179, 0.14), 0 0 42px rgba(123, 241, 179, 0.36);
+  transform: scale(1.035);
+}
+
+.tutorial-steps {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tutorial-steps span {
+  width: 22px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.tutorial-steps span.active {
+  background: var(--success-green);
+  box-shadow: 0 0 10px rgba(123, 241, 179, 0.8);
 }
 
 .mode-picker {
@@ -645,7 +764,7 @@ body {
   .hud-center { gap: 8px; }
   .combo-box, .score-box { min-width: 72px; padding: 8px; }
   .arena { inset: 96px 0 0; }
-  .lane-wrap { width: calc(100% - 28px); bottom: 24vh; height: min(320px, 42dvh); }
+  .lane-wrap { width: calc(100% - 28px); bottom: 24vh; height: min(390px, 50dvh); }
   .camera-panel { top: auto; right: max(8px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(45vw, 220px); }
   .camera-header { padding: 6px 8px; font-size: 0.5rem; }
   .tracking-status { display: none; }
@@ -666,11 +785,13 @@ body {
   .bar { height: 8px; margin-top: 5px; }
   .prompt-box { top: 8px; min-width: 0; padding: 9px 12px; }
   .gesture-prompt { font-size: 1.3rem; }
-  .lane-wrap { bottom: 20vh; height: min(240px, 40dvh); }
+  .lane-wrap { bottom: 20vh; height: min(290px, 44dvh); }
   .note { width: 64px; height: 64px; font-size: 0.48rem; }
   .camera-panel { width: min(42vw, 190px); }
   .start-screen { align-items: start; overflow-y: auto; }
   .start-panel { margin: 12px 0; padding: 24px 18px; }
+  .tutorial-screen { padding: 100px 12px 12px; }
+  .tutorial-panel { padding: 16px; }
 }
 
 .attack-burst {
