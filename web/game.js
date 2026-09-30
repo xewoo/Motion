@@ -9,6 +9,11 @@ const state = {
   lastKnownGestureTime: 0,
   hitWindowMs: 180,
   nextNoteDelayMs: 700,
+  noteTravelMs: 1500,
+  mistakeDamage: 8,
+  scoreMultiplier: 1,
+  difficulty: 'medium',
+  gameMode: 'solo',
   lastFrame: 0,
   wave: 1,
   isPaused: false,
@@ -44,10 +49,22 @@ const gestureCtx = gestureCanvas ? gestureCanvas.getContext('2d') : null;
 const startScreen = typeof document !== 'undefined' ? document.getElementById('startScreen') : null;
 const startButton = typeof document !== 'undefined' ? document.getElementById('startGameButton') : null;
 const trackingStatus = typeof document !== 'undefined' ? document.getElementById('trackingStatus') : null;
+const difficultyButtons = typeof document !== 'undefined' ? document.querySelectorAll('[data-difficulty]') : [];
+const modeButtons = typeof document !== 'undefined' ? document.querySelectorAll('[data-mode]') : [];
 let mediaPipeAttached = false;
 let cameraStarted = false;
 
 const gestures = ['Open Palm', 'Fist', 'Victory', 'Pointing', 'Thumbs Up'];
+const difficultyConfig = {
+  easy: { hitWindowMs: 280, nextNoteDelayMs: 900, noteTravelMs: 2200, mistakeDamage: 5, scoreMultiplier: 0.8 },
+  medium: { hitWindowMs: 180, nextNoteDelayMs: 700, noteTravelMs: 1500, mistakeDamage: 8, scoreMultiplier: 1 },
+  hard: { hitWindowMs: 105, nextNoteDelayMs: 440, noteTravelMs: 1050, mistakeDamage: 13, scoreMultiplier: 1.35 },
+};
+const modeConfig = {
+  solo: { scoreMultiplier: 1 },
+  dual: { scoreMultiplier: 1.35 },
+  split: { scoreMultiplier: 1.6 },
+};
 const HAND_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4],
   [0, 5], [5, 6], [6, 7], [7, 8],
@@ -108,6 +125,32 @@ function ensureCanvasSize() {
 
   gestureCanvas.width = cameraFeed.videoWidth || 320;
   gestureCanvas.height = cameraFeed.videoHeight || 240;
+  if (cameraPanel && cameraFeed.videoWidth && cameraFeed.videoHeight) {
+    cameraPanel.style.setProperty('--camera-ratio', `${cameraFeed.videoWidth} / ${cameraFeed.videoHeight}`);
+  }
+}
+
+function applyDifficulty(difficulty) {
+  const settings = difficultyConfig[difficulty];
+  if (!settings) return;
+
+  state.difficulty = difficulty;
+  Object.assign(state, settings);
+  difficultyButtons.forEach((button) => {
+    const isSelected = button.dataset.difficulty === difficulty;
+    button.classList.toggle('selected', isSelected);
+    button.setAttribute('aria-pressed', String(isSelected));
+  });
+}
+
+function applyGameMode(mode) {
+  if (!modeConfig[mode]) return;
+  state.gameMode = mode;
+  modeButtons.forEach((button) => {
+    const isSelected = button.dataset.mode === mode;
+    button.classList.toggle('selected', isSelected);
+    button.setAttribute('aria-pressed', String(isSelected));
+  });
 }
 
 function updateHud() {
@@ -117,33 +160,51 @@ function updateHud() {
   if (enemyHealthEl) enemyHealthEl.style.width = `${state.enemyHealth}%`;
 }
 
-function setPrompt(gesture) {
-  state.currentGesture = gesture;
-  if (promptEl) promptEl.textContent = gesture;
-  if (currentGestureLabel) currentGestureLabel.textContent = gesture;
+function setPrompt(prompt) {
+  state.currentGesture = prompt;
+  if (promptEl) promptEl.textContent = prompt;
+  if (currentGestureLabel) currentGestureLabel.textContent = prompt;
+}
+
+function randomGesture(except = null) {
+  const choices = except ? gestures.filter((gesture) => gesture !== except) : gestures;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
+function formatExpectedGesture(note) {
+  if (note.mode === 'split') return `L: ${note.leftGesture} | R: ${note.rightGesture}`;
+  if (note.mode === 'dual') return `Both: ${note.gesture}`;
+  return note.gesture;
 }
 
 function spawnNote() {
   if (!lane || state.gameOver || !state.hasStarted) return;
 
   const note = document.createElement('div');
-  const gesture = gestures[Math.floor(Math.random() * gestures.length)];
+  const gesture = randomGesture();
+  const mode = state.gameMode;
+  const leftGesture = mode === 'split' ? gesture : null;
+  const rightGesture = mode === 'split' ? randomGesture(gesture) : null;
   note.className = 'note';
-  note.textContent = gesture;
+  note.classList.toggle('two-hand-note', mode !== 'solo');
+  note.textContent = formatExpectedGesture({ mode, gesture, leftGesture, rightGesture });
   lane.appendChild(note);
 
   const createdAt = performance.now();
-  const dueAt = createdAt + 1500;
+  const dueAt = createdAt + state.noteTravelMs;
 
   state.currentNote = {
     gesture,
+    mode,
+    leftGesture,
+    rightGesture,
     createdAt,
     dueAt,
     element: note,
   };
 
   setTimingCue(false);
-  setPrompt(gesture);
+  setPrompt(formatExpectedGesture(state.currentNote));
 }
 
 function removeCurrentNote() {
@@ -205,10 +266,11 @@ function triggerAttackVisual() {
 
 function hitSuccess(diff) {
   state.combo += 1;
-  state.score += 100 + state.combo * 10;
+  const points = Math.round((100 + state.combo * 10) * state.scoreMultiplier * modeConfig[state.gameMode].scoreMultiplier);
+  state.score += points;
   state.enemyHealth = Math.max(0, state.enemyHealth - 12 - state.combo * 0.8);
   const quality = diff <= 65 ? 'PERFECT' : 'GOOD';
-  showCombatFeedback(`${quality}  +${100 + state.combo * 10}`, 'success');
+  showCombatFeedback(`${quality}  +${points}`, 'success');
   triggerAttackVisual();
 
   if (state.enemyHealth === 0) {
@@ -227,7 +289,7 @@ function hitSuccess(diff) {
 
 function failHit(message = 'MISS') {
   state.combo = 0;
-  state.templeHealth = Math.max(0, state.templeHealth - 8);
+  state.templeHealth = Math.max(0, state.templeHealth - state.mistakeDamage);
   showCombatFeedback(message, 'miss');
   const temple = document.querySelector('.temple');
   if (temple) {
@@ -280,6 +342,8 @@ function restartGame() {
     pauseButton.disabled = false;
     pauseButton.textContent = 'Pause';
   }
+  if (gameOverEyebrow) gameOverEyebrow.textContent = 'Temple fallen';
+  if (gameOverTitle) gameOverTitle.textContent = 'Run ended';
   gameOverScreen?.classList.add('hidden');
   removeCurrentNote();
   updateHud();
@@ -287,8 +351,19 @@ function restartGame() {
   requestAnimationFrame(gameLoop);
 }
 
-function handleGestureInput(gesture) {
-  if (!gesture) return;
+function matchesCurrentNote(input) {
+  if (!state.currentNote) return false;
+  const { mode, gesture, leftGesture, rightGesture } = state.currentNote;
+  if (mode === 'solo') {
+    return typeof input === 'string' ? input === gesture : Object.values(input).includes(gesture);
+  }
+  if (typeof input === 'string') return false;
+  if (mode === 'dual') return input.left === gesture && input.right === gesture;
+  return input.left === leftGesture && input.right === rightGesture;
+}
+
+function handleGestureInput(input) {
+  if (!input) return;
   if (!state.hasStarted || state.isPaused) return;
   const now = performance.now();
 
@@ -297,9 +372,9 @@ function handleGestureInput(gesture) {
   }
 
   const diff = Math.abs(now - state.currentNote.dueAt);
-  if (gesture !== state.currentNote.gesture) {
+  if (!matchesCurrentNote(input)) {
     if (diff <= state.hitWindowMs) {
-      failHit(`Wrong gesture - show ${state.currentNote.gesture}`);
+      failHit(`Wrong gestures - show ${formatExpectedGesture(state.currentNote)}`);
     }
     return;
   }
@@ -417,13 +492,13 @@ function classifyHand(landmarks) {
   return null;
 }
 
-function drawLandmarks(landmarks) {
+function drawLandmarks(landmarks, shouldClear = true) {
   if (!gestureCtx || !gestureCanvas) return;
 
   const width = gestureCanvas.width;
   const height = gestureCanvas.height;
 
-  gestureCtx.clearRect(0, 0, width, height);
+  if (shouldClear) gestureCtx.clearRect(0, 0, width, height);
   if (!landmarks) return;
 
   gestureCtx.strokeStyle = '#7bf1b3';
@@ -459,25 +534,37 @@ function onHandResults(results) {
     if (trackingStatus) trackingStatus.textContent = 'No hand detected';
     return;
   }
-  if (gameOverEyebrow) gameOverEyebrow.textContent = 'Temple fallen';
-  if (gameOverTitle) gameOverTitle.textContent = 'Run ended';
+  const detectedHands = {};
+  gestureCtx.clearRect(0, 0, gestureCanvas.width, gestureCanvas.height);
 
-  const imageLandmarks = results.multiHandLandmarks[0];
-  const poseLandmarks = results.multiHandWorldLandmarks?.[0] ?? imageLandmarks;
-  const detectedGesture = classifyHand(poseLandmarks);
-  drawLandmarks(imageLandmarks);
-  if (trackingStatus) trackingStatus.textContent = detectedGesture ? 'Hand detected' : 'Adjust your hand';
+  results.multiHandLandmarks.forEach((imageLandmarks, index) => {
+    const poseLandmarks = results.multiHandWorldLandmarks?.[index] ?? imageLandmarks;
+    const handedness = results.multiHandedness?.[index];
+    const label = handedness?.label ?? handedness?.[0]?.label ?? (index === 0 ? 'Left' : 'Right');
+    const side = label.toLowerCase().includes('right') ? 'right' : 'left';
+    detectedHands[side] = classifyHand(poseLandmarks);
+    drawLandmarks(imageLandmarks, false);
+  });
 
-  if (detectedGesture) {
-    state.lastDetectedGesture = detectedGesture;
-    if (currentGestureLabel) currentGestureLabel.textContent = detectedGesture;
-    const now = performance.now();
-    if (now - state.lastKnownGestureTime > 200) {
-      handleGestureInput(detectedGesture);
-      state.lastKnownGestureTime = now;
-    }
-  } else if (currentGestureLabel) {
-    currentGestureLabel.textContent = 'Open your palm or make a clear fist';
+  const needsBothHands = state.gameMode !== 'solo';
+  const hasBothHands = Boolean(detectedHands.left && detectedHands.right);
+  const recognized = Object.values(detectedHands).filter(Boolean);
+  if (trackingStatus) {
+    trackingStatus.textContent = needsBothHands && !hasBothHands
+      ? 'Show both hands'
+      : recognized.length ? 'Hands detected' : 'Adjust your hands';
+  }
+  if (currentGestureLabel) {
+    const left = detectedHands.left ?? '--';
+    const right = detectedHands.right ?? '--';
+    currentGestureLabel.textContent = needsBothHands ? `L: ${left} | R: ${right}` : recognized[0] ?? 'Open your palm or make a clear fist';
+  }
+
+  const now = performance.now();
+  if (recognized.length && now - state.lastKnownGestureTime > 160) {
+    state.lastDetectedGesture = needsBothHands ? detectedHands : recognized[0];
+    handleGestureInput(needsBothHands ? detectedHands : recognized[0]);
+    state.lastKnownGestureTime = now;
   }
 }
 
@@ -497,7 +584,7 @@ function attachMediaPipe() {
   });
 
   hands.setOptions({
-    maxNumHands: 1,
+    maxNumHands: 2,
     modelComplexity: 1,
     minDetectionConfidence: 0.55,
     minTrackingConfidence: 0.55,
@@ -510,8 +597,8 @@ function attachMediaPipe() {
     onFrame: async () => {
       await hands.send({ image: video });
     },
-    width: 640,
-    height: 480,
+    width: video.videoWidth || 640,
+    height: video.videoHeight || 480,
   });
 
   camera.start();
@@ -522,6 +609,7 @@ async function startCamera() {
   cameraStarted = true;
 
   try {
+    cameraFeed.addEventListener('resize', ensureCanvasSize);
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     cameraFeed.srcObject = stream;
 
@@ -542,11 +630,20 @@ function startGame() {
   state.hasStarted = true;
   state.isPaused = false;
   startScreen?.classList.add('hidden');
+  requestGameFullscreen();
   updateHud();
   setPrompt(gestures[0]);
   spawnNote();
   requestAnimationFrame(gameLoop);
   startCamera();
+}
+
+function requestGameFullscreen() {
+  const fullscreenTarget = document.documentElement;
+  if (!fullscreenTarget?.requestFullscreen || document.fullscreenElement) return;
+  fullscreenTarget.requestFullscreen().catch(() => {
+    // Some mobile browsers keep the game in viewport mode; the responsive layout still fills it.
+  });
 }
 
 if (typeof window !== 'undefined') {
@@ -584,11 +681,21 @@ if (startButton) {
   startButton.addEventListener('click', startGame);
 }
 
+difficultyButtons.forEach((button) => {
+  button.addEventListener('click', () => applyDifficulty(button.dataset.difficulty));
+});
+
+modeButtons.forEach((button) => {
+  button.addEventListener('click', () => applyGameMode(button.dataset.mode));
+});
+
 function bootGame() {
   if (!lane || !promptEl || !comboEl || !scoreEl || !templeHealthEl || !enemyHealthEl || !cameraFeed || !currentGestureLabel || !attackBurst || !gestureCanvas) return;
 
   updateHud();
   setPrompt(gestures[0]);
+  applyDifficulty('medium');
+  applyGameMode('solo');
 }
 
 if (typeof document !== 'undefined') {

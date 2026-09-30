@@ -15,9 +15,6 @@
           <div class="pillar pillar-left"></div>
           <div class="pillar pillar-right"></div>
         </div>
-        <div class="monster monster-1"></div>
-        <div class="monster monster-2"></div>
-        <div class="monster monster-3"></div>
       </div>
 
       <header class="hud">
@@ -56,6 +53,7 @@
         <div class="lane-wrap">
           <div class="lane-title">Rhythm lane</div>
           <div id="timingCue" class="timing-cue" aria-live="polite">WAIT FOR CENTER</div>
+          <div class="monster monster-2"></div>
           <div id="noteLane" class="note-lane"></div>
         </div>
       </main>
@@ -92,6 +90,22 @@
           <div class="gesture-guide" aria-label="Supported gestures">
             <span>Open Palm</span><span>Fist</span><span>Victory</span><span>Pointing</span><span>Thumbs Up</span>
           </div>
+          <fieldset class="difficulty-picker">
+            <legend>Choose a level</legend>
+            <div class="difficulty-options">
+              <button class="difficulty-button" type="button" data-difficulty="easy" aria-pressed="false">Easy <small>More time</small></button>
+              <button class="difficulty-button selected" type="button" data-difficulty="medium" aria-pressed="true">Medium <small>Balanced</small></button>
+              <button class="difficulty-button" type="button" data-difficulty="hard" aria-pressed="false">Hard <small>Fast notes</small></button>
+            </div>
+          </fieldset>
+          <fieldset class="mode-picker">
+            <legend>Choose a hand mode</legend>
+            <div class="mode-options">
+              <button class="mode-button selected" type="button" data-mode="solo" aria-pressed="true">Solo <small>One hand</small></button>
+              <button class="mode-button" type="button" data-mode="dual" aria-pressed="false">Two hands <small>Same gesture</small></button>
+              <button class="mode-button" type="button" data-mode="split" aria-pressed="false">Split hands <small>Different gestures</small></button>
+            </div>
+          </fieldset>
           <button id="startGameButton" class="start-button" type="button">Start game</button>
           <small>Your camera will be requested only after you press Start game.</small>
         </div>
