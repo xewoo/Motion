@@ -188,6 +188,94 @@ body {
 .p5 { left: 28%; top: 76%; }
 .p6 { left: 10%; top: 48%; }
 
+.guardian-shield {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: clamp(92px, 9vw, 150px);
+  aspect-ratio: 0.78;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(126, 238, 255, 0.66);
+  border-radius: 48% 48% 54% 54% / 34% 34% 66% 66%;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(187, 255, 250, 0.22), transparent 28%),
+    linear-gradient(145deg, rgba(72, 142, 163, 0.44), rgba(14, 36, 50, 0.82));
+  box-shadow:
+    inset 0 0 18px rgba(171, 255, 248, 0.26),
+    0 0 18px rgba(112, 235, 255, 0.46),
+    0 0 46px rgba(92, 167, 255, 0.18);
+  opacity: 0.86;
+  pointer-events: none;
+  will-change: transform, filter, box-shadow;
+}
+
+.guardian-shield::before,
+.guardian-shield::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(144, 255, 229, 0.42);
+  border-radius: inherit;
+}
+
+.guardian-shield::after {
+  inset: 17px;
+  border-color: rgba(126, 203, 255, 0.25);
+}
+
+.guardian-shield-left {
+  left: clamp(42px, 11vw, 190px);
+  animation: guardianShieldLeft 7.5s ease-in-out infinite;
+}
+
+.guardian-shield-right {
+  right: clamp(42px, 11vw, 190px);
+  animation: guardianShieldRight 9s ease-in-out infinite;
+}
+
+.shield-rune {
+  position: relative;
+  z-index: 1;
+  color: #c9fff7;
+  font-family: Georgia, serif;
+  font-size: clamp(2.5rem, 4vw, 5rem);
+  line-height: 1;
+  text-shadow:
+    0 0 5px #ffffff,
+    0 0 12px #8effef,
+    0 0 25px #54dfff,
+    0 0 42px rgba(92, 174, 255, 0.9);
+  animation: runePulse 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes guardianShieldLeft {
+  0%, 100% {
+    transform: translateY(-50%) translate(0, 18px) rotate(-7deg);
+    filter: brightness(0.88);
+  }
+  50% {
+    transform: translateY(-50%) translate(18px, -30px) rotate(5deg);
+    filter: brightness(1.32);
+  }
+}
+
+@keyframes guardianShieldRight {
+  0%, 100% {
+    transform: translateY(-50%) translate(0, -26px) rotate(7deg);
+    filter: brightness(1.08);
+  }
+  50% {
+    transform: translateY(-50%) translate(-20px, 28px) rotate(-6deg);
+    filter: brightness(1.4);
+  }
+}
+
+@keyframes runePulse {
+  0% { opacity: 0.7; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1.08); }
+}
+
 .orc-formation {
   position: absolute;
   right: clamp(20px, 2vw, 50px);
