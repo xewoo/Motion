@@ -223,8 +223,11 @@ export function detectSixSeven(hands, state, timestamp) {
   return Math.min(0.99, 0.62 + 0.06 * reversals + Math.min(0.18, amplitude));
 }
 
-export function facialExpression(blendshapes) {
-  const scores = Object.fromEntries(blendshapes.map(category => [category.categoryName, category.score]));
+export function facialExpression(blendshapeResult) {
+  const categories = Array.isArray(blendshapeResult)
+    ? blendshapeResult
+    : Array.isArray(blendshapeResult?.categories) ? blendshapeResult.categories : [];
+  const scores = Object.fromEntries(categories.map(category => [category.categoryName, category.score]));
   const average = (first, second) => ((scores[first] ?? 0) + (scores[second] ?? 0)) / 2;
   const expressions = {
     Happy: average("mouthSmileLeft", "mouthSmileRight"),

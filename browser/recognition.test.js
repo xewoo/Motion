@@ -118,10 +118,12 @@ test("six-seven requires alternating vertical positions of two open hands", () =
 });
 
 test("expression cues and gesture history are smoothed", () => {
-  assert.deepEqual(facialExpression([
+  const categories = [
     { categoryName: "mouthSmileLeft", score: 0.9 },
     { categoryName: "mouthSmileRight", score: 0.8 },
-  ])[0], "Happy");
+  ];
+  assert.deepEqual(facialExpression(categories)[0], "Happy");
+  assert.deepEqual(facialExpression({ categories })[0], "Happy");
   assert.equal(facialExpression([])[0], "Neutral");
   const history = [];
   assert.equal(stabilizeGesture("Victory", 0.9, history)[0], "Victory");
