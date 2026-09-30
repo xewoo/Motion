@@ -18,6 +18,10 @@ const state = {
   tutorialComplete: false,
   trainingStep: 0,
   trainingAdvancing: false,
+  handTracking: {
+    left: { gesture: null, frames: 0 },
+    right: { gesture: null, frames: 0 },
+  },
   lastFrame: 0,
   wave: 1,
   isPaused: false,
@@ -39,6 +43,7 @@ const enemyHealthEl = typeof document !== 'undefined' ? document.getElementById(
 const cameraFeed = typeof document !== 'undefined' ? document.getElementById('cameraFeed') : null;
 const currentGestureLabel = typeof document !== 'undefined' ? document.getElementById('currentGestureLabel') : null;
 const attackBurst = typeof document !== 'undefined' ? document.getElementById('attackBurst') : null;
+const screenCrack = typeof document !== 'undefined' ? document.getElementById('screenCrack') : null;
 const backgroundMusic = typeof document !== 'undefined' ? document.getElementById('backgroundMusic') : null;
 const musicToggleButton = typeof document !== 'undefined' ? document.getElementById('musicToggleButton') : null;
 const musicVolume = typeof document !== 'undefined' ? document.getElementById('musicVolume') : null;
@@ -235,6 +240,15 @@ async function toggleMusic() {
   }
 }
 
+async function startBackgroundMusic() {
+  if (!backgroundMusic || !backgroundMusic.paused) return;
+  try {
+    await backgroundMusic.play();
+  } catch (error) {
+    console.warn('Background music needs a user interaction to play.', error);
+  }
+}
+
 function setTimingCue(isReady) {
   if (timingCue) {
     timingCue.textContent = isReady ? 'GESTURE NOW' : 'WAIT FOR CENTER';
@@ -346,6 +360,7 @@ function startTraining() {
   tutorialScreen?.classList.remove('hidden');
   if (pauseButton) pauseButton.disabled = true;
   requestGameFullscreen();
+  startBackgroundMusic();
   updateTrainingUi();
   startCamera();
 }
@@ -419,6 +434,7 @@ function spawnNote() {
     createdAt,
     dueAt,
     element: note,
+    wasJudged: false,
   };
 
   setTimingCue(false);
@@ -519,6 +535,7 @@ function failHit(message = 'MISS') {
   gameShell?.classList.remove('miss-flash');
   void gameShell?.offsetWidth;
   gameShell?.classList.add('miss-flash');
+  triggerScreenCrack();
   lane?.classList.remove('lane-missed');
   void lane?.offsetWidth;
   lane?.classList.add('lane-missed');
@@ -530,6 +547,14 @@ function failHit(message = 'MISS') {
   if (state.templeHealth === 0) {
     finishGame();
   }
+}
+
+function triggerScreenCrack() {
+  if (!screenCrack) return;
+  screenCrack.classList.remove('show');
+  void screenCrack.offsetWidth;
+  screenCrack.classList.add('show');
+  setTimeout(() => screenCrack.classList.remove('show'), 720);
 }
 
 function finishGame(isVictory = false) {
@@ -598,7 +623,8 @@ function handleGestureInput(input) {
 
   const diff = Math.abs(now - state.currentNote.dueAt);
   if (!matchesCurrentNote(input)) {
-    if (diff <= state.hitWindowMs) {
+    if (diff <= state.hitWindowMs && !state.currentNote.wasJudged) {
+      state.currentNote.wasJudged = true;
       failHit(`Wrong gestures - show ${formatExpectedGesture(state.currentNote)}`);
     }
     return;
@@ -628,10 +654,11 @@ function updateNotePosition(now) {
   setTimingCue(isReady);
 
   if (now > dueAt + state.hitWindowMs) {
+    const missedNote = state.currentNote;
     element.remove();
     state.currentNote = null;
     setTimingCue(false);
-    failHit(`Too late - prepare ${state.currentGesture} earlier`);
+    if (!missedNote.wasJudged) failHit(`Too late - prepare ${state.currentGesture} earlier`);
     scheduleNextNote();
   }
 }
@@ -718,7 +745,36 @@ function classifyHand(landmarks) {
 }
 
 function getMirroredHandSide(handednessLabel) {
-  return handednessLabel === 'Right' ? 'left' : 'right';
+  if (handednessLabel === 'Right') return 'left';
+  if (handednessLabel === 'Left') return 'right';
+  return null;
+}
+
+function resolveHandSide(handednessLabel, landmarks, occupiedSides = new Set()) {
+  const preferredSide = getMirroredHandSide(handednessLabel);
+  if (preferredSide && !occupiedSides.has(preferredSide)) return preferredSide;
+
+  const wrist = landmarks?.[0];
+  const screenSide = wrist && wrist.x > 0.5 ? 'left' : 'right';
+  if (!occupiedSides.has(screenSide)) return screenSide;
+  return screenSide === 'left' ? 'right' : 'left';
+}
+
+function stabilizeHandGesture(side, gesture) {
+  const tracking = state.handTracking[side];
+  if (!gesture) {
+    tracking.gesture = null;
+    tracking.frames = 0;
+    return null;
+  }
+
+  if (tracking.gesture === gesture) {
+    tracking.frames += 1;
+  } else {
+    tracking.gesture = gesture;
+    tracking.frames = 1;
+  }
+  return tracking.frames >= 2 ? gesture : null;
 }
 
 function drawLandmarks(landmarks, shouldClear = true) {
@@ -764,23 +820,30 @@ function onHandResults(results) {
     return;
   }
   const detectedHands = {};
+  const visibleHands = new Set();
   gestureCtx.clearRect(0, 0, gestureCanvas.width, gestureCanvas.height);
 
   results.multiHandLandmarks.forEach((imageLandmarks, index) => {
     const poseLandmarks = results.multiHandWorldLandmarks?.[index] ?? imageLandmarks;
     const handedness = results.multiHandedness?.[index];
     const label = handedness?.label ?? handedness?.[0]?.label ?? (index === 0 ? 'Left' : 'Right');
-    const side = getMirroredHandSide(label);
-    detectedHands[side] = classifyHand(poseLandmarks);
+    const side = resolveHandSide(label, imageLandmarks, visibleHands);
+    visibleHands.add(side);
+    detectedHands[side] = stabilizeHandGesture(side, classifyHand(poseLandmarks));
     drawLandmarks(imageLandmarks, false);
   });
 
+  ['left', 'right'].forEach((side) => {
+    if (!visibleHands.has(side)) stabilizeHandGesture(side, null);
+  });
+
   const needsBothHands = state.gameMode !== 'solo';
-  const hasBothHands = Boolean(detectedHands.left && detectedHands.right);
+  const hasBothHands = visibleHands.has('left') && visibleHands.has('right');
   const recognized = Object.values(detectedHands).filter(Boolean);
   if (trackingStatus) {
     trackingStatus.textContent = needsBothHands && !hasBothHands
       ? 'Show both hands'
+      : needsBothHands && recognized.length < 2 ? 'Hold both gestures steady'
       : recognized.length ? 'Hands detected' : 'Adjust your hands';
   }
   if (currentGestureLabel) {
@@ -789,8 +852,9 @@ function onHandResults(results) {
     currentGestureLabel.textContent = needsBothHands ? `L: ${left} | R: ${right}` : recognized[0] ?? 'Open your palm or make a clear fist';
   }
 
+  const readyForInput = needsBothHands ? recognized.length === 2 : recognized.length > 0;
   const now = performance.now();
-  if (recognized.length && now - state.lastKnownGestureTime > 160) {
+  if (readyForInput && now - state.lastKnownGestureTime > 160) {
     state.lastDetectedGesture = needsBothHands ? detectedHands : recognized[0];
     handleGestureInput(needsBothHands ? detectedHands : recognized[0]);
     state.lastKnownGestureTime = now;
@@ -960,4 +1024,4 @@ if (typeof document !== 'undefined') {
   bootGame();
 }
 
-export { classifyHand, getMirroredHandSide, pointDistance, jointAngle };
+export { classifyHand, getMirroredHandSide, resolveHandSide, pointDistance, jointAngle };

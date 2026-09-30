@@ -72,7 +72,9 @@
         <div class="lane-wrap">
           <div class="lane-title">Rhythm lane</div>
           <div id="timingCue" class="timing-cue" aria-live="polite">WAIT FOR CENTER</div>
-          <div class="monster monster-2"></div>
+          <div class="monster monster-2">
+            <img class="monster-art" src="assets/14hq.png?v=20260930-10" alt="Guardian enemy" />
+          </div>
           <div id="noteLane" class="note-lane"></div>
         </div>
       </main>
@@ -98,6 +100,7 @@
       </aside>
 
       <div id="combatFeedback" class="combat-feedback" aria-live="polite" aria-atomic="true"></div>
+      <div id="screenCrack" class="screen-crack" aria-hidden="true"></div>
       <section id="gameOverScreen" class="game-over-screen hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
         <div class="game-over-panel">
           <span id="gameOverEyebrow" class="label">Temple fallen</span>
@@ -159,7 +162,7 @@
     <div id="attackBurst" class="attack-burst hidden"></div>
 
     <audio id="backgroundMusic" autoplay loop preload="auto" aria-hidden="true">
-      <source src="assets/Kajjrat_Nurtas_-_Lambada_79414252.mp3" type="audio/mpeg" />
+      <source src="assets/Kajjrat_Nurtas_-_Lambada_79414252.mp3?v=20260930-10" type="audio/mpeg" />
     </audio>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>

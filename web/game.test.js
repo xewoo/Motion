@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { classifyHand, getMirroredHandSide } from "./game.js";
+import { classifyHand, getMirroredHandSide, resolveHandSide } from "./game.js";
 
 const point = (x, y, z = 0) => ({ x, y, z });
 
@@ -103,6 +103,13 @@ function rotateLandmarks(landmarks, angleX, angleY, angleZ) {
 test("handedness follows the mirrored camera preview", () => {
   assert.equal(getMirroredHandSide("Left"), "right");
   assert.equal(getMirroredHandSide("Right"), "left");
+});
+
+test("two hands keep separate sides when handedness labels are missing or duplicated", () => {
+  const occupiedSides = new Set(["left"]);
+
+  assert.equal(resolveHandSide("Unknown", [point(0.2, 0.5)], new Set()), "right");
+  assert.equal(resolveHandSide("Right", [point(0.8, 0.5)], occupiedSides), "right");
 });
 
 test("fist recognition stays valid across the frame and matches gesture prompts", () => {
