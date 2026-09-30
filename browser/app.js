@@ -243,9 +243,15 @@ function updateCameraZoom(result, now) {
   const elapsed = lastZoomUpdateTime === null ? 0 : Math.max(0, now - lastZoomUpdateTime);
   lastZoomUpdateTime = now;
   cameraZoom = smoothZoom(cameraZoom, zoomTarget, elapsed);
-  elements.cameraFrame.style.setProperty("--camera-zoom", cameraZoom.toFixed(3));
+  applyCameraZoom();
   elements.zoomIndicator.textContent = `${zoomGestureActive ? "МАСШТАБ" : "ЗУМ"} ${cameraZoom.toFixed(1)}×`;
   elements.zoomIndicator.classList.toggle("is-active", zoomGestureActive);
+}
+
+function applyCameraZoom() {
+  const transform = `scale(${cameraZoom.toFixed(3)}) scaleX(-1)`;
+  elements.camera.style.transform = transform;
+  elements.overlay.style.transform = transform;
 }
 
 function resetCameraZoom() {
@@ -256,7 +262,7 @@ function resetCameraZoom() {
   zoomAnchorPinch = null;
   zoomAnchorScale = 1;
   lastZoomUpdateTime = null;
-  elements.cameraFrame.style.setProperty("--camera-zoom", "1");
+  applyCameraZoom();
   elements.zoomIndicator.textContent = "ЗУМ 1.0×";
   elements.zoomIndicator.classList.remove("is-active");
 }
