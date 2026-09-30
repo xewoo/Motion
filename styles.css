@@ -197,15 +197,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 3px solid rgba(215, 174, 91, 0.98);
+  border: 2px solid rgba(102, 236, 255, 0.9);
   border-radius: 14% 14% 48% 48% / 8% 8% 78% 78%;
   clip-path: polygon(50% 0, 94% 8%, 91% 69%, 50% 100%, 9% 69%, 6% 8%);
   background:
-    linear-gradient(90deg, #b87822 0 28%, #141414 28% 51%, #c98d32 51% 72%, #181818 72% 100%);
+    linear-gradient(90deg, rgba(21, 87, 106, 0.96) 0 28%, rgba(4, 18, 26, 0.98) 28% 51%, rgba(18, 74, 91, 0.96) 51% 72%, rgba(3, 16, 23, 0.98) 72% 100%);
   box-shadow:
-    inset 0 0 20px rgba(255, 226, 148, 0.25),
-    0 0 18px rgba(255, 206, 111, 0.42),
-    0 0 46px rgba(255, 177, 73, 0.2);
+    inset 0 0 20px rgba(137, 247, 255, 0.2),
+    0 0 18px rgba(83, 235, 255, 0.48),
+    0 0 46px rgba(50, 184, 255, 0.24);
   opacity: 0.98;
   pointer-events: none;
   will-change: transform, filter, box-shadow;
@@ -216,14 +216,14 @@ body {
   content: "";
   position: absolute;
   inset: 5px;
-  border: 1px solid rgba(255, 222, 137, 0.9);
+  border: 1px solid rgba(128, 248, 255, 0.74);
   border-radius: 14% 14% 46% 46% / 8% 8% 76% 76%;
   clip-path: polygon(50% 0, 94% 8%, 91% 69%, 50% 100%, 9% 69%, 6% 8%);
 }
 
 .guardian-shield::after {
   inset: 12px;
-  border-color: rgba(44, 32, 17, 0.8);
+  border-color: rgba(71, 216, 226, 0.3);
 }
 
 .guardian-shield-left {
@@ -242,23 +242,46 @@ body {
   z-index: 1;
   display: grid;
   place-items: center;
-  border: 2px solid rgba(203, 164, 83, 0.92);
+  border: 2px solid rgba(77, 220, 230, 0.88);
   border-radius: 12% 12% 44% 44% / 8% 8% 72% 72%;
   clip-path: polygon(50% 0, 96% 8%, 91% 69%, 50% 100%, 9% 69%, 4% 8%);
-  background: radial-gradient(circle at 50% 42%, rgba(255, 218, 124, 0.22), transparent 34%), #090909;
-  box-shadow: inset 0 0 15px rgba(255, 206, 108, 0.24), 0 0 10px rgba(255, 191, 77, 0.28);
+  background: radial-gradient(circle at 50% 42%, rgba(117, 255, 223, 0.22), transparent 34%), #04151d;
+  box-shadow: inset 0 0 15px rgba(104, 244, 235, 0.24), 0 0 12px rgba(80, 238, 255, 0.34);
 }
 
 .shield-crest {
   position: relative;
   z-index: 2;
-  color: #fff3c6;
-  font-family: Georgia, serif;
-  font-size: clamp(2.2rem, 3.4vw, 4rem);
-  line-height: 1;
-  text-shadow: 0 0 4px #fff, 0 0 12px #f2c96e, 0 0 24px rgba(255, 165, 58, 0.9);
-  transform: translateY(3px);
-  opacity: 0.98;
+  width: 42%;
+  height: 58%;
+  border: 1px solid rgba(181, 255, 242, 0.9);
+  clip-path: polygon(50% 0, 90% 12%, 84% 72%, 50% 100%, 16% 72%, 10% 12%);
+  background: linear-gradient(145deg, rgba(163, 255, 245, 0.9), rgba(45, 177, 192, 0.32) 45%, rgba(5, 48, 59, 0.85));
+  box-shadow: 0 0 7px #d7fff8, 0 0 18px rgba(71, 241, 255, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.45);
+  animation: shieldCrestGlow 2.4s ease-in-out infinite alternate;
+}
+
+.shield-crest::before,
+.shield-crest::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 65%;
+  height: 10%;
+  transform: translateX(-50%) rotate(32deg);
+  border-top: 2px solid #e1fff8;
+  border-bottom: 2px solid rgba(149, 255, 239, 0.72);
+  box-shadow: 0 0 7px #8dfff0;
+}
+
+.shield-crest::after {
+  transform: translateX(-50%) rotate(-32deg);
+}
+
+@keyframes shieldCrestGlow {
+  from { filter: brightness(0.86); opacity: 0.78; }
+  to { filter: brightness(1.3); opacity: 1; }
 }
 
 @keyframes guardianShieldLeft {
@@ -281,11 +304,6 @@ body {
     transform: translateY(-50%) translate(-20px, 28px) rotate(-6deg);
     filter: brightness(1.4);
   }
-}
-
-@keyframes scriptGlow {
-  0% { opacity: 0.68; filter: brightness(0.82); }
-  100% { opacity: 1; filter: brightness(1.32); }
 }
 
 .orc-formation {
