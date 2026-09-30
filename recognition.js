@@ -34,19 +34,17 @@ export function physicalHandedness(reportedHandedness) {
 
 export function detectZoomPinch(result) {
   if (result.landmarks?.length !== 1) return null;
-  const reportedHandedness = result.handedness?.[0]?.[0]?.categoryName;
-  if (physicalHandedness(reportedHandedness) !== "Right") return null;
+  if (gestureLabel(result, 0)[0] !== "Pointing up") return null;
 
-  const landmarks = result.worldLandmarks?.[0] ?? result.landmarks[0];
+  const landmarks = result.landmarks[0];
   if (!landmarks || landmarks.length < 21) return null;
-  const curled = [[9, 10, 12], [13, 14, 16], [17, 18, 20]].every(([mcp, pip, tip]) => (
-    jointAngle(landmarks[mcp], landmarks[pip], landmarks[tip]) <= 135
-  ));
-  if (!curled) return null;
-
-  const palmWidth = pointDistance(landmarks[5], landmarks[17]);
+  const imageDistance = (first, second) => Math.hypot(
+    first.x - second.x,
+    first.y - second.y,
+  );
+  const palmWidth = imageDistance(landmarks[5], landmarks[17]);
   if (palmWidth < 1e-6) return null;
-  return pointDistance(landmarks[4], landmarks[8]) / palmWidth;
+  return imageDistance(landmarks[4], landmarks[8]) / palmWidth;
 }
 
 export function pinchZoomTarget(anchorScale, anchorPinch, pinchDistance) {

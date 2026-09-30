@@ -10,7 +10,6 @@ import {
   gestureLabel,
   isLoveYouPosture,
   pinchZoomTarget,
-  physicalHandedness,
   smoothZoom,
   stabilizeGesture,
 } from "./recognition.js";
@@ -104,25 +103,25 @@ test("grabbing requires an open hand before a fist", () => {
   assert.equal(detectGrabbing([fist], [fist], createRecognitionState())[0], null);
 });
 
-test("zoom pinch requires a curled-finger physical right hand with no second hand", () => {
-  const curledHand = makePose(new Set());
+test("zoom control requires a pointing-up gesture and no second hand", () => {
+  const pointingHand = makePose(new Set(["index"]));
   const result = {
-    landmarks: [curledHand],
-    worldLandmarks: [curledHand],
-    handedness: [[{ categoryName: "Left" }]],
+    landmarks: [pointingHand],
+    gestures: [[{ categoryName: "Pointing_Up", score: 0.95 }]],
   };
   const pinchDistance = detectZoomPinch(result);
   assert.ok(pinchDistance > 0);
-  assert.equal(physicalHandedness("Left"), "Right");
-  assert.equal(physicalHandedness("Right"), "Left");
-  assert.equal(detectZoomPinch({ ...result, handedness: [[{ categoryName: "Right" }]] }), null);
-  assert.equal(detectZoomPinch({ ...result, landmarks: [curledHand, curledHand] }), null);
-
-  const openMiddleFinger = makePose(new Set(["middle"]));
   assert.equal(detectZoomPinch({
     ...result,
-    landmarks: [openMiddleFinger],
-    worldLandmarks: [openMiddleFinger],
+    gestures: [[{ categoryName: "Victory", score: 0.95 }]],
+  }), null);
+  assert.equal(detectZoomPinch({ ...result, landmarks: [pointingHand, pointingHand] }), null);
+
+  const pointingWithoutGesture = makePose(new Set(["index"]));
+  assert.equal(detectZoomPinch({
+    ...result,
+    landmarks: [pointingWithoutGesture],
+    gestures: [[]],
   }), null);
   assert.equal(pinchZoomTarget(1.5, 0.3, 0.34), 1.5);
   assert.ok(pinchZoomTarget(1.5, 0.3, 0.5) > 1.5);
