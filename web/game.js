@@ -76,7 +76,6 @@ const tutorialInstruction = typeof document !== 'undefined' ? document.getElemen
 const tutorialSteps = typeof document !== 'undefined' ? document.querySelectorAll('.tutorial-steps span') : [];
 const tutorialHandCanvas = typeof document !== 'undefined' ? document.getElementById('tutorialHandCanvas') : null;
 const tutorialHandCtx = tutorialHandCanvas ? tutorialHandCanvas.getContext('2d') : null;
-const monsterImages = typeof document !== 'undefined' ? document.querySelectorAll('.monster-art') : [];
 const bestScore = typeof document !== 'undefined' ? document.getElementById('bestScore') : null;
 const recordsList = typeof document !== 'undefined' ? document.getElementById('recordsList') : null;
 const gameOverRecords = typeof document !== 'undefined' ? document.getElementById('gameOverRecords') : null;
@@ -88,9 +87,9 @@ const trainingGestures = [...gestures];
 const RECORDS_KEY = 'temple-guardian-records-v1';
 const MUSIC_VOLUME_KEY = 'temple-guardian-music-volume-v1';
 const MONSTER_IMAGES = {
-  default: 'assets/14hq.png?v=20260930-10',
-  happy: 'assets/Radost.jpg',
-  angry: 'assets/Zloy.jpg',
+  default: 'assets/14hq.png?v=20260930-11',
+  happy: 'assets/Radost.jpg?v=20260930-1',
+  angry: 'assets/Zloy.jpg?v=20260930-1',
 };
 const difficultyConfig = {
   easy: { hitWindowMs: 280, nextNoteDelayMs: 900, noteTravelMs: 2200, mistakeDamage: 5, scoreMultiplier: 0.8 },
@@ -559,8 +558,21 @@ function showCombatFeedback(message, result) {
   }, 760);
 }
 
+function getMonsterImages() {
+  return typeof document !== 'undefined' ? document.querySelectorAll('.monster-art') : [];
+}
+
+function preloadMonsterExpressions() {
+  if (typeof Image === 'undefined') return;
+  Object.values(MONSTER_IMAGES).forEach((source) => {
+    const image = new Image();
+    image.src = source;
+  });
+}
+
 function showMonsterExpression(expression) {
   const image = MONSTER_IMAGES[expression];
+  const monsterImages = getMonsterImages();
   if (!image || !monsterImages.length) return;
 
   monsterImages.forEach((monsterImage) => {
@@ -570,7 +582,7 @@ function showMonsterExpression(expression) {
 
   if (state.monsterExpressionTimeout) clearTimeout(state.monsterExpressionTimeout);
   state.monsterExpressionTimeout = setTimeout(() => {
-    monsterImages.forEach((monsterImage) => {
+    getMonsterImages().forEach((monsterImage) => {
       monsterImage.src = MONSTER_IMAGES.default;
       monsterImage.alt = 'Guardian enemy';
     });
@@ -972,9 +984,8 @@ function attachMediaPipe() {
   if (mediaPipeAttached) return;
   const video = cameraFeed;
   const { Hands } = window;
-  const { Camera } = window;
 
-  if (!Hands || !Camera) {
+  if (!Hands || !video) {
     console.warn('MediaPipe libraries are not ready yet.');
     return;
   }
@@ -985,7 +996,7 @@ function attachMediaPipe() {
 
   hands.setOptions({
     maxNumHands: 2,
-    modelComplexity: 1,
+    modelComplexity: window.matchMedia?.('(pointer: coarse)').matches ? 0 : 1,
     minDetectionConfidence: 0.55,
     minTrackingConfidence: 0.55,
   });
@@ -993,24 +1004,37 @@ function attachMediaPipe() {
   hands.onResults(onHandResults);
   mediaPipeAttached = true;
 
-  const camera = new Camera(video, {
-    onFrame: async () => {
-      await hands.send({ image: video });
-    },
-    width: video.videoWidth || 640,
-    height: video.videoHeight || 480,
-  });
+  const sendCameraFrame = async () => {
+    if (!cameraStarted || !video.srcObject) {
+      return;
+    }
 
-  camera.start();
+    if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      try {
+        await hands.send({ image: video });
+      } catch (error) {
+        console.warn('Hand tracking frame could not be processed.', error);
+      }
+    }
+
+    requestAnimationFrame(sendCameraFrame);
+  };
+
+  requestAnimationFrame(sendCameraFrame);
 }
 
 async function startCamera() {
   if (!cameraFeed || cameraStarted) return;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    if (trackingStatus) trackingStatus.textContent = 'Camera is not supported';
+    return;
+  }
   cameraStarted = true;
+  let stream = null;
 
   try {
     cameraFeed.addEventListener('resize', ensureCanvasSize);
-    const stream = await navigator.mediaDevices.getUserMedia({
+    stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: 'user',
         width: { ideal: 1280 },
@@ -1018,17 +1042,27 @@ async function startCamera() {
       },
       audio: false,
     });
-    cameraFeed.srcObject = stream;
-
     cameraFeed.onloadedmetadata = () => {
       ensureCanvasSize();
       attachMediaPipe();
     };
+    cameraFeed.srcObject = stream;
+    await cameraFeed.play();
+    if (cameraFeed.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      ensureCanvasSize();
+      attachMediaPipe();
+    }
   } catch (error) {
     cameraStarted = false;
+    stream?.getTracks().forEach((track) => track.stop());
+    cameraFeed.srcObject = null;
     console.warn('Camera access denied or unavailable; demo mode remains active.', error);
     if (currentGestureLabel) currentGestureLabel.textContent = 'Keyboard demo mode';
-    if (trackingStatus) trackingStatus.textContent = 'Camera unavailable';
+    if (trackingStatus) {
+      trackingStatus.textContent = error?.name === 'NotReadableError'
+        ? 'Camera is busy — close other camera apps'
+        : 'Camera unavailable';
+    }
   }
 }
 
@@ -1124,6 +1158,7 @@ function bootGame() {
   applyGameMode('solo');
   renderRecords();
   restoreMusicVolume();
+  preloadMonsterExpressions();
   enableCameraDragging();
 }
 
