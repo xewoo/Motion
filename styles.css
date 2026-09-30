@@ -522,9 +522,14 @@ body {
   position: absolute;
   --camera-ratio: 16 / 9;
   top: auto;
-  right: clamp(12px, 2vw, 32px);
-  bottom: max(12px, env(safe-area-inset-bottom));
-  width: clamp(210px, 25vw, 380px);
+  right: clamp(18px, 3vw, 48px);
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: clamp(300px, 29vw, 460px);
+  min-width: 260px;
+  resize: both;
+  min-height: 190px;
+  max-width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
   height: auto;
   z-index: 14;
   overflow: hidden;
@@ -545,6 +550,12 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   min-height: 34px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.camera-header:active {
+  cursor: grabbing;
 }
 
 .tracking-status {
@@ -814,7 +825,7 @@ body {
   .combo-box, .score-box { min-width: 72px; padding: 8px; }
   .arena { inset: 96px 0 0; }
   .lane-wrap { width: calc(100% - 28px); bottom: 24vh; height: min(320px, 42dvh); }
-  .camera-panel { top: auto; right: max(8px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(45vw, 220px); }
+  .camera-panel { top: auto; right: max(8px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(58vw, 320px); min-width: 220px; }
   .camera-header { padding: 6px 8px; font-size: 0.5rem; }
   .tracking-status { display: none; }
   .pause-button { padding: 5px 7px; font-size: 0.5rem; }
@@ -836,7 +847,7 @@ body {
   .gesture-prompt { font-size: 1.3rem; }
   .lane-wrap { bottom: 20vh; height: min(240px, 40dvh); }
   .note { width: 64px; height: 64px; font-size: 0.48rem; }
-  .camera-panel { width: min(42vw, 190px); }
+  .camera-panel { width: min(58vw, 280px); min-width: 190px; }
   .start-screen { align-items: start; overflow-y: auto; }
   .start-panel { margin: 12px 0; padding: 24px 18px; }
 }
