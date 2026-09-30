@@ -299,7 +299,7 @@ function drawFrame(result, sixSevenScore, grabbingScores) {
     }
     const handedness = result.handedness?.[handIndex]?.[0]?.categoryName ?? "Hand";
     const labelText = `${displayGesture(label)} · ${handedness} ${Math.round(score * 100)}%`;
-    const left = Math.min(...points.map(([x]) => x));
+    const left = width - Math.max(...points.map(([x]) => x));
     const top = Math.min(...points.map(([, y]) => y));
     drawCanvasLabel(labelText, left, top - 8 * scale, "#267642", scale, width, height);
   });
@@ -309,6 +309,9 @@ function drawFrame(result, sixSevenScore, grabbingScores) {
 }
 
 function drawCanvasLabel(text, x, baselineY, background, scale, width, height) {
+  context.save();
+  context.translate(width, 0);
+  context.scale(-1, 1);
   const fontSize = Math.max(13, Math.min(19, width / 58));
   context.font = `600 ${fontSize}px system-ui, sans-serif`;
   const paddingX = 7 * scale;
@@ -323,6 +326,7 @@ function drawCanvasLabel(text, x, baselineY, background, scale, width, height) {
   context.fillStyle = "#ffffff";
   context.textBaseline = "middle";
   context.fillText(text, left + paddingX, top + boxHeight / 2);
+  context.restore();
 }
 
 function drawObjects(detections, width, height, scale) {
@@ -339,7 +343,7 @@ function drawObjects(detections, width, height, scale) {
     const name = category?.displayName || category?.categoryName || "Объект";
     drawCanvasLabel(
       `${name} ${Math.round((category?.score ?? 0) * 100)}%`,
-      left,
+      width - right,
       top - 5 * scale,
       "#aa5f14",
       scale,
@@ -378,7 +382,7 @@ function drawFaces(result, scale, width, height) {
         context.stroke();
       }
     }
-    const left = Math.min(...landmarks.map(point => point.x * width));
+    const left = width - Math.max(...landmarks.map(point => point.x * width));
     const top = Math.min(...landmarks.map(point => point.y * height));
     const expressionRu = EXPRESSION_LABELS_RU[expression] ?? expression;
     drawCanvasLabel(
