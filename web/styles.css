@@ -449,6 +449,14 @@ body {
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+  transform-origin: 50% 78%;
+  animation: monsterSway 2.4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes monsterSway {
+  from { transform: rotate(-4deg) translateX(-5px); }
+  to { transform: rotate(4deg) translateX(5px); }
 }
 
 .monster::before {
@@ -940,6 +948,15 @@ body {
   margin: 8px 0;
   color: var(--temple-gold);
   font-size: clamp(1.45rem, 3vw, 2.15rem);
+}
+
+.tutorial-hand-canvas {
+  display: block;
+  width: min(220px, 72vw);
+  height: auto;
+  margin: 4px auto 2px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 62%, rgba(123, 241, 179, 0.12), transparent 58%);
 }
 
 .tutorial-panel p {

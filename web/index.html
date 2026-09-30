@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Temple Guardian</title>
-    <link rel="stylesheet" href="styles.css?v=20260930-9" />
+    <link rel="stylesheet" href="styles.css?v=20260930-10" />
   </head>
   <body>
     <div class="game-shell">
@@ -151,6 +151,7 @@
         <div id="tutorialPanel" class="tutorial-panel">
           <span id="tutorialProgress" class="eyebrow">Training 1 / 5</span>
           <h2 id="tutorialTitle">Show: Open Palm</h2>
+          <canvas id="tutorialHandCanvas" class="tutorial-hand-canvas" width="220" height="170" aria-label="Gesture hand skeleton example"></canvas>
           <p id="tutorialInstruction">Hold your hand in front of the camera. Take as much time as you need.</p>
           <div class="tutorial-steps" aria-hidden="true">
             <span class="active"></span><span></span><span></span><span></span><span></span>
@@ -167,6 +168,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script type="module" src="game.js?v=20260930-2"></script>
+    <script type="module" src="game.js?v=20260930-3"></script>
   </body>
 </html>

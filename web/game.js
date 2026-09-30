@@ -30,6 +30,7 @@ const state = {
   dragState: null,
   nextNotePending: false,
   feedbackTimeout: null,
+  monsterExpressionTimeout: null,
 };
 
 const lane = typeof document !== 'undefined' ? document.getElementById('noteLane') : null;
@@ -73,6 +74,9 @@ const tutorialProgress = typeof document !== 'undefined' ? document.getElementBy
 const tutorialTitle = typeof document !== 'undefined' ? document.getElementById('tutorialTitle') : null;
 const tutorialInstruction = typeof document !== 'undefined' ? document.getElementById('tutorialInstruction') : null;
 const tutorialSteps = typeof document !== 'undefined' ? document.querySelectorAll('.tutorial-steps span') : [];
+const tutorialHandCanvas = typeof document !== 'undefined' ? document.getElementById('tutorialHandCanvas') : null;
+const tutorialHandCtx = tutorialHandCanvas ? tutorialHandCanvas.getContext('2d') : null;
+const monsterImages = typeof document !== 'undefined' ? document.querySelectorAll('.monster-art') : [];
 const bestScore = typeof document !== 'undefined' ? document.getElementById('bestScore') : null;
 const recordsList = typeof document !== 'undefined' ? document.getElementById('recordsList') : null;
 const gameOverRecords = typeof document !== 'undefined' ? document.getElementById('gameOverRecords') : null;
@@ -83,6 +87,11 @@ const gestures = ['Open Palm', 'Fist', 'Victory', 'Pointing', 'Thumbs Up'];
 const trainingGestures = [...gestures];
 const RECORDS_KEY = 'temple-guardian-records-v1';
 const MUSIC_VOLUME_KEY = 'temple-guardian-music-volume-v1';
+const MONSTER_IMAGES = {
+  default: 'assets/14hq.png?v=20260930-10',
+  happy: 'assets/Radost.jpg',
+  angry: 'assets/Zloy.jpg',
+};
 const difficultyConfig = {
   easy: { hitWindowMs: 280, nextNoteDelayMs: 900, noteTravelMs: 2200, mistakeDamage: 5, scoreMultiplier: 0.8 },
   medium: { hitWindowMs: 180, nextNoteDelayMs: 700, noteTravelMs: 1500, mistakeDamage: 8, scoreMultiplier: 1 },
@@ -346,7 +355,81 @@ function updateTrainingUi() {
   if (tutorialTitle) tutorialTitle.textContent = `Show: ${gesture}`;
   if (tutorialInstruction) tutorialInstruction.textContent = 'No timer - hold the gesture clearly in front of the camera.';
   tutorialSteps.forEach((step, index) => step.classList.toggle('active', index === state.trainingStep));
+  drawTutorialHand(gesture);
   setPrompt(`Training: ${gesture}`);
+}
+
+function createTutorialHand(gesture) {
+  const points = Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.68 }));
+  points[0] = { x: 0.5, y: 0.86 };
+  points[1] = { x: 0.43, y: 0.79 };
+  points[2] = { x: 0.36, y: 0.71 };
+  points[3] = { x: 0.29, y: 0.64 };
+  points[4] = { x: 0.21, y: 0.58 };
+
+  const fingers = [
+    [5, 6, 7, 8, 0.39, 0.57],
+    [9, 10, 11, 12, 0.49, 0.53],
+    [13, 14, 15, 16, 0.59, 0.57],
+    [17, 18, 19, 20, 0.68, 0.63],
+  ];
+  const extendedFingers = {
+    'Open Palm': [true, true, true, true],
+    Fist: [false, false, false, false],
+    Victory: [true, true, false, false],
+    Pointing: [true, false, false, false],
+    'Thumbs Up': [false, false, false, false],
+  }[gesture] ?? [true, true, true, true];
+
+  fingers.forEach(([mcp, pip, dip, tip, x, mcpY], index) => {
+    points[mcp] = { x, y: mcpY };
+    if (extendedFingers[index]) {
+      points[pip] = { x, y: mcpY - 0.18 };
+      points[dip] = { x, y: mcpY - 0.34 };
+      points[tip] = { x, y: mcpY - 0.49 };
+    } else {
+      points[pip] = { x: x + (x < 0.5 ? 0.06 : -0.06), y: mcpY + 0.08 };
+      points[dip] = { x: x + (x < 0.5 ? 0.11 : -0.11), y: mcpY + 0.13 };
+      points[tip] = { x: x + (x < 0.5 ? 0.08 : -0.08), y: mcpY + 0.18 };
+    }
+  });
+
+  if (gesture === 'Thumbs Up') {
+    points[1] = { x: 0.43, y: 0.79 };
+    points[2] = { x: 0.38, y: 0.66 };
+    points[3] = { x: 0.36, y: 0.48 };
+    points[4] = { x: 0.35, y: 0.25 };
+  } else if (gesture === 'Fist') {
+    points[4] = { x: 0.39, y: 0.76 };
+  }
+  return points;
+}
+
+function drawTutorialHand(gesture) {
+  if (!tutorialHandCtx || !tutorialHandCanvas) return;
+  const points = createTutorialHand(gesture);
+  const { width, height } = tutorialHandCanvas;
+  tutorialHandCtx.clearRect(0, 0, width, height);
+  tutorialHandCtx.strokeStyle = '#7bf1b3';
+  tutorialHandCtx.lineWidth = 3;
+  tutorialHandCtx.lineCap = 'round';
+  tutorialHandCtx.fillStyle = '#eafff4';
+  tutorialHandCtx.shadowColor = 'rgba(123, 241, 179, 0.7)';
+  tutorialHandCtx.shadowBlur = 10;
+
+  for (const [start, end] of HAND_CONNECTIONS) {
+    tutorialHandCtx.beginPath();
+    tutorialHandCtx.moveTo(points[start].x * width, points[start].y * height);
+    tutorialHandCtx.lineTo(points[end].x * width, points[end].y * height);
+    tutorialHandCtx.stroke();
+  }
+
+  tutorialHandCtx.shadowBlur = 0;
+  for (const point of points) {
+    tutorialHandCtx.beginPath();
+    tutorialHandCtx.arc(point.x * width, point.y * height, 4, 0, Math.PI * 2);
+    tutorialHandCtx.fill();
+  }
 }
 
 function startTraining() {
@@ -476,6 +559,25 @@ function showCombatFeedback(message, result) {
   }, 760);
 }
 
+function showMonsterExpression(expression) {
+  const image = MONSTER_IMAGES[expression];
+  if (!image || !monsterImages.length) return;
+
+  monsterImages.forEach((monsterImage) => {
+    monsterImage.src = image;
+    monsterImage.alt = expression === 'happy' ? 'Happy guardian enemy' : 'Angry guardian enemy';
+  });
+
+  if (state.monsterExpressionTimeout) clearTimeout(state.monsterExpressionTimeout);
+  state.monsterExpressionTimeout = setTimeout(() => {
+    monsterImages.forEach((monsterImage) => {
+      monsterImage.src = MONSTER_IMAGES.default;
+      monsterImage.alt = 'Guardian enemy';
+    });
+    state.monsterExpressionTimeout = null;
+  }, 300);
+}
+
 function triggerAttackVisual() {
   if (!attackBurst) return;
 
@@ -508,6 +610,7 @@ function hitSuccess(diff) {
   state.enemyHealth = Math.max(0, state.enemyHealth - 12 - state.combo * 0.8);
   const quality = diff <= 65 ? 'PERFECT' : 'GOOD';
   showCombatFeedback(`${quality}  +${points}`, 'success');
+  showMonsterExpression('happy');
   triggerAttackVisual();
 
   if (state.enemyHealth === 0) {
@@ -528,6 +631,7 @@ function failHit(message = 'MISS') {
   state.combo = 0;
   state.templeHealth = Math.max(0, state.templeHealth - state.mistakeDamage);
   showCombatFeedback(message, 'miss');
+  showMonsterExpression('angry');
   const temple = document.querySelector('.temple');
   if (temple) {
     temple.classList.remove('temple-hit');
