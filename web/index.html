@@ -55,6 +55,7 @@
 
         <div class="lane-wrap">
           <div class="lane-title">Rhythm lane</div>
+          <div id="timingCue" class="timing-cue" aria-live="polite">WAIT FOR CENTER</div>
           <div id="noteLane" class="note-lane"></div>
         </div>
       </main>
@@ -74,6 +75,14 @@
       </aside>
 
       <div id="combatFeedback" class="combat-feedback" aria-live="polite" aria-atomic="true"></div>
+      <section id="gameOverScreen" class="game-over-screen hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+        <div class="game-over-panel">
+          <span class="label">Temple fallen</span>
+          <h1 id="gameOverTitle">Run ended</h1>
+          <p>Final score <strong id="finalScore">0</strong></p>
+          <button id="restartGameButton" class="restart-button" type="button">Play again</button>
+        </div>
+      </section>
     </div>
 
     <div id="attackBurst" class="attack-burst hidden"></div>

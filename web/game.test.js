@@ -24,6 +24,8 @@ function makeGestureHand({ offsetX = 0, offsetY = 0, pose = "fist" } = {}) {
 
   if (pose !== "fist") {
     Object.assign(coordinates, { 2: [-0.2, -0.1], 3: [-0.12, -0.12], 4: [-0.1, -0.06] });
+  } else {
+    Object.assign(coordinates, { 2: [-0.12, -0.02], 3: [-0.07, -0.07], 4: [-0.04, -0.06] });
   }
 
   const fingers = {
@@ -54,4 +56,13 @@ test("fist recognition stays valid across the frame and matches gesture prompts"
 
   assert.equal(classifyHand(center), "Fist");
   assert.equal(classifyHand(corner), "Fist");
+});
+
+test("thumbs up is not swallowed by the curled-finger fist rule", () => {
+  const hand = makeGestureHand({ pose: "fist" });
+  hand[2] = point(0.44, 0.48);
+  hand[3] = point(0.40, 0.43);
+  hand[4] = point(0.36, 0.38);
+
+  assert.equal(classifyHand(hand), "Thumbs Up");
 });

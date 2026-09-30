@@ -12,12 +12,15 @@ const state = {
   lastFrame: 0,
   wave: 1,
   isPaused: false,
+  gameOver: false,
   dragState: null,
   nextNotePending: false,
   feedbackTimeout: null,
 };
 
 const lane = typeof document !== 'undefined' ? document.getElementById('noteLane') : null;
+const laneWrap = typeof document !== 'undefined' ? document.querySelector('.lane-wrap') : null;
+const timingCue = typeof document !== 'undefined' ? document.getElementById('timingCue') : null;
 const promptEl = typeof document !== 'undefined' ? document.getElementById('gesturePrompt') : null;
 const comboEl = typeof document !== 'undefined' ? document.getElementById('comboValue') : null;
 const scoreEl = typeof document !== 'undefined' ? document.getElementById('scoreValue') : null;
@@ -30,6 +33,9 @@ const pauseButton = typeof document !== 'undefined' ? document.getElementById('p
 const cameraPanel = typeof document !== 'undefined' ? document.querySelector('.camera-panel') : null;
 const cameraHeader = typeof document !== 'undefined' ? document.querySelector('.camera-header') : null;
 const combatFeedback = typeof document !== 'undefined' ? document.getElementById('combatFeedback') : null;
+const gameOverScreen = typeof document !== 'undefined' ? document.getElementById('gameOverScreen') : null;
+const finalScore = typeof document !== 'undefined' ? document.getElementById('finalScore') : null;
+const restartButton = typeof document !== 'undefined' ? document.getElementById('restartGameButton') : null;
 const gestureCanvas = typeof document !== 'undefined' ? document.getElementById('gestureCanvas') : null;
 const gestureCtx = gestureCanvas ? gestureCanvas.getContext('2d') : null;
 
@@ -77,7 +83,16 @@ function setPaused(nextPaused) {
 }
 
 function togglePause() {
+  if (state.gameOver) return;
   setPaused(!state.isPaused);
+}
+
+function setTimingCue(isReady) {
+  if (timingCue) {
+    timingCue.textContent = isReady ? 'GESTURE NOW' : 'WAIT FOR CENTER';
+    timingCue.classList.toggle('ready', isReady);
+  }
+  laneWrap?.classList.toggle('timing-ready', isReady);
 }
 
 function ensureCanvasSize() {
@@ -163,7 +178,7 @@ function setPrompt(gesture) {
 }
 
 function spawnNote() {
-  if (!lane) return;
+  if (!lane || state.gameOver) return;
 
   const note = document.createElement('div');
   const gesture = gestures[Math.floor(Math.random() * gestures.length)];
@@ -181,6 +196,7 @@ function spawnNote() {
     element: note,
   };
 
+  setTimingCue(false);
   setPrompt(gesture);
 }
 
@@ -188,10 +204,12 @@ function removeCurrentNote() {
   if (!state.currentNote) return;
   state.currentNote.element.remove();
   state.currentNote = null;
+  setTimingCue(false);
 }
 
 function scheduleNextNote() {
   setTimeout(() => {
+    if (state.gameOver) return;
     if (!state.currentNote && !state.isPaused) {
       spawnNote();
     } else if (!state.currentNote) {
@@ -278,6 +296,41 @@ function failHit() {
     lane?.classList.remove('lane-missed');
   }, 420);
   updateHud();
+  if (state.templeHealth === 0) {
+    finishGame();
+  }
+}
+
+function finishGame() {
+  state.gameOver = true;
+  state.isPaused = true;
+  state.nextNotePending = false;
+  removeCurrentNote();
+  setTimingCue(false);
+  if (pauseButton) pauseButton.disabled = true;
+  if (finalScore) finalScore.textContent = String(state.score);
+  gameOverScreen?.classList.remove('hidden');
+}
+
+function restartGame() {
+  state.combo = 0;
+  state.score = 0;
+  state.templeHealth = 100;
+  state.enemyHealth = 100;
+  state.wave = 1;
+  state.lastKnownGestureTime = 0;
+  state.nextNotePending = false;
+  state.gameOver = false;
+  state.isPaused = false;
+  if (pauseButton) {
+    pauseButton.disabled = false;
+    pauseButton.textContent = 'Pause';
+  }
+  gameOverScreen?.classList.add('hidden');
+  removeCurrentNote();
+  updateHud();
+  spawnNote();
+  requestAnimationFrame(gameLoop);
 }
 
 function handleGestureInput(gesture) {
@@ -311,20 +364,26 @@ function updateNotePosition(now) {
   const { createdAt, dueAt, element } = state.currentNote;
   const total = dueAt - createdAt;
   const elapsed = now - createdAt;
-  const progress = clamp(elapsed / total, 0, 1.2);
-  const y = 20 + progress * 170;
+  const progress = clamp(elapsed / total, 0, 1);
+  const targetY = lane.clientHeight / 2 - element.offsetHeight / 2;
+  const y = -element.offsetHeight + progress * (targetY + element.offsetHeight);
+  const isReady = Math.abs(now - dueAt) <= state.hitWindowMs;
 
   element.style.top = `${y}px`;
+  element.classList.toggle('note-ready', isReady);
+  setTimingCue(isReady);
 
   if (now > dueAt + state.hitWindowMs) {
     element.remove();
     state.currentNote = null;
+    setTimingCue(false);
     failHit();
     scheduleNextNote();
   }
 }
 
 function gameLoop(now) {
+  if (state.gameOver) return;
   if (!state.isPaused) {
     if (state.nextNotePending && !state.currentNote) {
       state.nextNotePending = false;
@@ -370,6 +429,12 @@ function classifyHand(landmarks) {
   const pinkyExtended = fingerAngles.pinky >= 150;
   const thumbIsExtended = thumbExtended(landmarks);
   const allFingersCurled = Object.values(fingerAngles).every((angle) => angle <= 135);
+  const handScale = pointDistance(landmarks[0], landmarks[9]);
+  const thumbPointsUp = landmarks[4].y < landmarks[0].y - handScale * 0.12;
+
+  if (thumbIsExtended && thumbPointsUp && allFingersCurled) {
+    return 'Thumbs Up';
+  }
 
   if (allFingersCurled) {
     return 'Fist';
@@ -383,7 +448,7 @@ function classifyHand(landmarks) {
     return 'Pointing';
   }
 
-  if (thumbIsExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+  if (thumbIsExtended && thumbPointsUp && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
     return 'Thumbs Up';
   }
 
@@ -533,6 +598,10 @@ if (typeof window !== 'undefined') {
 
 if (pauseButton) {
   pauseButton.addEventListener('click', togglePause);
+}
+
+if (restartButton) {
+  restartButton.addEventListener('click', restartGame);
 }
 
 function bootGame() {
