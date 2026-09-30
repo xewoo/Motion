@@ -1,144 +1,152 @@
-<!doctype html>
-<html lang="ru">
+﻿<!DOCTYPE html>
+<html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#10131c">
-    <title>Motion — распознавание жестов</title>
-    <link rel="stylesheet" href="./styles.css">
-    <script type="module" src="./app.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temple Guardian</title>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <header class="topbar">
-        <a class="brand" href="./" aria-label="Motion, главная">
-          <span class="brand-mark" aria-hidden="true">M</span>
-          <span>motion<span class="brand-dot">.</span></span>
-        </a>
-        <span class="mode-indicator"><span class="live-dot"></span> Обработка в браузере</span>
-      </header>
-
-      <section class="intro">
-        <p class="eyebrow">КОМПЬЮТЕРНОЕ ЗРЕНИЕ · В РЕАЛЬНОМ ВРЕМЕНИ</p>
-        <h1>Движение говорит.</h1>
-        <p class="intro-copy">Покажите жест веб-камере — распознавание происходит прямо на этом устройстве.</p>
-      </section>
-
-      <section class="workspace" aria-label="Распознавание с веб-камеры">
-        <div class="camera-column">
-          <div class="camera-frame" id="cameraFrame">
-            <video id="camera" autoplay muted playsinline aria-label="Изображение с веб-камеры"></video>
-            <canvas id="overlay" aria-hidden="true"></canvas>
-            <div class="camera-placeholder" id="placeholder">
-              <div class="placeholder-icon" aria-hidden="true">
-                <svg viewBox="0 0 48 48" fill="none">
-                  <rect x="5" y="12" width="26" height="24" rx="5"></rect>
-                  <path d="m31 20 11-6v20l-11-6"></path>
-                  <circle cx="18" cy="24" r="6"></circle>
-                </svg>
-              </div>
-              <strong>Камера пока выключена</strong>
-              <span>Нажмите «Включить камеру», чтобы начать</span>
-            </div>
-            <div class="camera-badge" id="cameraBadge"><span class="live-dot"></span> LIVE</div>
-            <div class="zoom-indicator" id="zoomIndicator" aria-live="polite">ЗУМ 1.0×</div>
+    <div class="game-shell">
+      <div class="background-scene">
+        <div class="sky-glow"></div>
+        <div class="scene-actors">
+          <div class="mage-tower">
+            <div class="tower-top"></div>
+            <div class="tower-rune rune-1"></div>
+            <div class="tower-rune rune-2"></div>
+            <div class="tower-rune rune-3"></div>
+            <div class="tower-crystal crystal-1"></div>
+            <div class="tower-crystal crystal-2"></div>
+            <div class="tower-crystal crystal-3"></div>
           </div>
 
-          <div class="camera-toolbar">
-            <div class="camera-actions">
-              <button class="button button-primary" id="startButton" type="button">
-                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4.8a1 1 0 0 1 1.52-.85l8 5.2a1 1 0 0 1 0 1.7l-8 5.2A1 1 0 0 1 6 15.2z"></path></svg>
-                Включить камеру
-              </button>
-              <button class="button button-secondary" id="stopButton" type="button" disabled>
-                Выключить
-              </button>
-            </div>
-            <span class="camera-hint">Для доступа откройте страницу через localhost или HTTPS</span>
+          <div class="energy-fist">
+            <div class="fist-core"></div>
+            <div class="fist-particle p1"></div>
+            <div class="fist-particle p2"></div>
+            <div class="fist-particle p3"></div>
+            <div class="fist-particle p4"></div>
+            <div class="fist-particle p5"></div>
+            <div class="fist-particle p6"></div>
           </div>
-          <p class="status-message" id="statusMessage" role="status" aria-live="polite">Готово к запуску. Покажите жест «Указание» и сведите или разведите большой и указательный пальцы.</p>
+
+          <div class="orc-formation">
+            <div class="orc orc-1"></div>
+            <div class="orc orc-2"></div>
+            <div class="orc orc-3"></div>
+            <div class="orc orc-4"></div>
+            <div class="orc orc-5"></div>
+            <div class="orc orc-6"></div>
+          </div>
+
+          <div class="temple">
+            <div class="temple-door"></div>
+            <div class="pillar pillar-left"></div>
+            <div class="pillar pillar-right"></div>
+          </div>
+        </div>
+      </div>
+
+      <header class="hud">
+        <div class="hud-block">
+          <span class="label">Temple HP</span>
+          <div class="bar">
+            <div id="templeHealth" class="bar-fill temple-fill"></div>
+          </div>
         </div>
 
-        <aside class="results-panel" aria-label="Результаты распознавания">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">АНАЛИЗ СЦЕНЫ</p>
-              <h2>Что в кадре</h2>
-            </div>
-            <span class="status-pill" id="systemStatus">ОЖИДАНИЕ</span>
+        <div class="hud-center">
+          <div class="combo-box">
+            <span class="label">Combo</span>
+            <strong id="comboValue">0x</strong>
           </div>
+          <div class="score-box">
+            <span class="label">Score</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+        </div>
 
-          <div class="result-card gesture-card">
-            <div class="result-icon gesture-icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path d="M11 15V7a2 2 0 0 1 4 0v7-9a2 2 0 0 1 4 0v9-7a2 2 0 0 1 4 0v8-4a2 2 0 0 1 4 0v9c0 5-3 8-8 8h-2c-3 0-5-1-7-4l-4-6a2 2 0 0 1 3-2z"></path>
-              </svg>
-            </div>
-            <div class="result-content">
-              <span class="result-label">ЖЕСТ</span>
-              <strong class="result-value" id="gestureValue">—</strong>
-              <span class="result-detail" id="gestureDetail">Покажите руку камере</span>
-            </div>
+        <div class="hud-block">
+          <span class="label">Enemy HP</span>
+          <div class="bar">
+            <div id="enemyHealth" class="bar-fill enemy-fill"></div>
           </div>
+        </div>
+      </header>
 
-          <div class="result-grid">
-            <div class="mini-card">
-              <span class="mini-label">РУКИ</span>
-              <strong id="handsValue">0</strong>
-            </div>
-            <div class="mini-card">
-              <span class="mini-label">ЛИЦА</span>
-              <strong id="facesValue">0</strong>
-            </div>
-            <div class="mini-card">
-              <span class="mini-label">ЧАСТОТА</span>
-              <strong><span id="fpsValue">0</span><small> FPS</small></strong>
-            </div>
-          </div>
+      <main class="arena">
+        <div id="promptBox" class="prompt-box">
+          <span class="label small">Next gesture</span>
+          <div id="gesturePrompt" class="gesture-prompt">Open Palm</div>
+        </div>
 
-          <div class="settings-card">
-            <div class="settings-heading">
-              <span>Слои распознавания</span>
-              <span class="settings-caption">Настройте отображение</span>
-            </div>
-            <label class="toggle-row">
-              <span><span class="toggle-dot face-dot"></span>Лицо и мимика</span>
-              <input id="facesToggle" type="checkbox" checked>
-              <span class="toggle-switch" aria-hidden="true"></span>
-            </label>
-            <label class="toggle-row toggle-subrow">
-              <span>Полная сетка лица</span>
-              <input id="meshToggle" type="checkbox" checked>
-              <span class="toggle-switch" aria-hidden="true"></span>
-            </label>
-          </div>
+        <div class="lane-wrap">
+          <div class="lane-title">Rhythm lane</div>
+          <div id="timingCue" class="timing-cue" aria-live="polite">WAIT FOR CENTER</div>
+          <div class="monster monster-2"></div>
+          <div id="noteLane" class="note-lane"></div>
+        </div>
+      </main>
 
-          <div class="dataset-card">
-            <div class="settings-heading">
-              <span>Сбор примеров</span>
-              <span class="sample-count" id="sampleCount">0 сохранено</span>
-            </div>
-            <label class="select-label" for="sampleLabel">Метка жеста</label>
-            <select id="sampleLabel">
-              <option value="open_palm">Открытая ладонь</option>
-              <option value="fist">Кулак</option>
-              <option value="peace">Победа / Peace</option>
-              <option value="pointing">Указание</option>
-              <option value="thumbs_up">Палец вверх</option>
-            </select>
-            <div class="dataset-actions">
-              <button class="button button-secondary button-compact" id="captureButton" type="button" disabled>Сохранить жест</button>
-              <button class="button button-secondary button-compact" id="downloadButton" type="button" disabled>Скачать CSV</button>
-            </div>
-            <p class="dataset-hint">Клавиши 1–5 также сохраняют пример выбранного жеста.</p>
-          </div>
-        </aside>
+      <aside class="camera-panel">
+        <div class="camera-header">
+          <span>Hand tracker</span>
+          <span id="trackingStatus" class="tracking-status">Camera off</span>
+          <button id="pauseGameButton" class="pause-button" type="button" aria-label="Pause game">Pause</button>
+        </div>
+        <div class="camera-stage">
+          <video id="cameraFeed" autoplay playsinline muted></video>
+          <canvas id="gestureCanvas"></canvas>
+        </div>
+        <div class="camera-overlay">
+          <span id="currentGestureLabel">Show your hand to begin</span>
+        </div>
+      </aside>
+
+      <div id="combatFeedback" class="combat-feedback" aria-live="polite" aria-atomic="true"></div>
+      <section id="gameOverScreen" class="game-over-screen hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+        <div class="game-over-panel">
+          <span id="gameOverEyebrow" class="label">Temple fallen</span>
+          <h1 id="gameOverTitle">Run ended</h1>
+          <p>Final score <strong id="finalScore">0</strong></p>
+          <button id="restartGameButton" class="restart-button" type="button">Play again</button>
+        </div>
       </section>
+      <section id="startScreen" class="start-screen" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+        <div class="start-panel">
+          <span class="eyebrow">Gesture rhythm game</span>
+          <h1 id="startTitle">Defend the Temple</h1>
+          <p>Use your hand as the controller. Match the requested gesture when the note reaches the center line.</p>
+          <div class="gesture-guide" aria-label="Supported gestures">
+            <span>Open Palm</span><span>Fist</span><span>Victory</span><span>Pointing</span><span>Thumbs Up</span>
+          </div>
+          <fieldset class="difficulty-picker">
+            <legend>Choose a level</legend>
+            <div class="difficulty-options">
+              <button class="difficulty-button" type="button" data-difficulty="easy" aria-pressed="false">Easy <small>More time</small></button>
+              <button class="difficulty-button selected" type="button" data-difficulty="medium" aria-pressed="true">Medium <small>Balanced</small></button>
+              <button class="difficulty-button" type="button" data-difficulty="hard" aria-pressed="false">Hard <small>Fast notes</small></button>
+            </div>
+          </fieldset>
+          <fieldset class="mode-picker">
+            <legend>Choose a hand mode</legend>
+            <div class="mode-options">
+              <button class="mode-button selected" type="button" data-mode="solo" aria-pressed="true">Solo <small>One hand</small></button>
+              <button class="mode-button" type="button" data-mode="dual" aria-pressed="false">Two hands <small>Same gesture</small></button>
+              <button class="mode-button" type="button" data-mode="split" aria-pressed="false">Split hands <small>Different gestures</small></button>
+            </div>
+          </fieldset>
+          <button id="startGameButton" class="start-button" type="button">Start game</button>
+          <small>Your camera will be requested only after you press Start game.</small>
+        </div>
+      </section>
+    </div>
 
-      <footer class="privacy-note">
-        <span class="privacy-icon" aria-hidden="true">●</span>
-        Видео не отправляется на сервер. Обработка выполняется локально в браузере.
-      </footer>
-    </main>
+    <div id="attackBurst" class="attack-burst hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script type="module" src="game.js"></script>
   </body>
 </html>
