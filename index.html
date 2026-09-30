@@ -22,10 +22,20 @@
           </div>
 
           <div class="guardian-shield guardian-shield-left" aria-hidden="true">
-            <div class="shield-rune">тЬж</div>
+            <div class="shield-script">
+              <span>тМБ сЪ▒ ╧Я сЪж ╧Ю тМБ</span>
+              <span>сЫЙ сЫГ ╧Я сЫЮ сЫЗ сЫЯ</span>
+              <span>тМБ сЪ╛ ╧Ю сЫП ╧Я тМБ</span>
+            </div>
+            <div class="shield-crest">тЪЬ</div>
           </div>
           <div class="guardian-shield guardian-shield-right" aria-hidden="true">
-            <div class="shield-rune">тЧЗ</div>
+            <div class="shield-script">
+              <span>тМБ сЫЯ ╧Ю сЫП ╧Я тМБ</span>
+              <span>сЪж сЫЙ ╧Я сЪ▒ сЫЮ сЫЗ</span>
+              <span>тМБ ╧Ю сЪ╛ сЫГ ╧Я тМБ</span>
+            </div>
+            <div class="shield-crest">тЪЬ</div>
           </div>
 
           <div class="temple">
@@ -98,18 +108,23 @@
           <span id="gameOverEyebrow" class="label">Temple fallen</span>
           <h1 id="gameOverTitle">Run ended</h1>
           <p>Final score <strong id="finalScore">0</strong></p>
+          <section class="game-over-records" aria-labelledby="gameOverRecordsTitle">
+            <h2 id="gameOverRecordsTitle">Top runs</h2>
+            <ol id="gameOverRecords" class="records-list"></ol>
+          </section>
           <button id="restartGameButton" class="restart-button" type="button">Play again</button>
         </div>
       </section>
       <section id="startScreen" class="start-screen" role="dialog" aria-modal="true" aria-labelledby="startTitle">
         <div class="start-panel">
           <span class="eyebrow">Gesture rhythm game</span>
-          <h1 id="startTitle">Defend the Temple</h1>
-          <p>Use your hand as the controller. Match the requested gesture when the note reaches the center line.</p>
+          <h1 id="startTitle">Learn to defend the Temple</h1>
+          <p id="startDescription">First, try every gesture at your own pace. There is no timer during training.</p>
           <div class="gesture-guide" aria-label="Supported gestures">
             <span>Open Palm</span><span>Fist</span><span>Victory</span><span>Pointing</span><span>Thumbs Up</span>
           </div>
-          <fieldset class="difficulty-picker">
+          <p class="recognition-note">Local rule-based recognition: the game checks finger joint angles, not a demo gesture label.</p>
+          <fieldset class="difficulty-picker level-selection hidden">
             <legend>Choose a level</legend>
             <div class="difficulty-options">
               <button class="difficulty-button" type="button" data-difficulty="easy" aria-pressed="false">Easy <small>More time</small></button>
@@ -117,7 +132,7 @@
               <button class="difficulty-button" type="button" data-difficulty="hard" aria-pressed="false">Hard <small>Fast notes</small></button>
             </div>
           </fieldset>
-          <fieldset class="mode-picker">
+          <fieldset class="mode-picker level-selection hidden">
             <legend>Choose a hand mode</legend>
             <div class="mode-options">
               <button class="mode-button selected" type="button" data-mode="solo" aria-pressed="true">Solo <small>One hand</small></button>
@@ -125,13 +140,32 @@
               <button class="mode-button" type="button" data-mode="split" aria-pressed="false">Split hands <small>Different gestures</small></button>
             </div>
           </fieldset>
-          <button id="startGameButton" class="start-button" type="button">Start game</button>
-          <small>Your camera will be requested only after you press Start game.</small>
+          <section class="progress-panel level-selection hidden" aria-labelledby="recordsTitle">
+            <div class="best-score">Best score <strong id="bestScore">0</strong></div>
+            <h2 id="recordsTitle">Your top runs</h2>
+            <ol id="recordsList" class="records-list"><li>No completed runs yet.</li></ol>
+          </section>
+          <button id="startGameButton" class="start-button" type="button">Start training</button>
+          <small id="startHint">Your camera will be requested only after you press Start training.</small>
+        </div>
+      </section>
+      <section id="tutorialScreen" class="tutorial-screen hidden" aria-live="polite" aria-atomic="true">
+        <div id="tutorialPanel" class="tutorial-panel">
+          <span id="tutorialProgress" class="eyebrow">Training 1 / 5</span>
+          <h2 id="tutorialTitle">Show: Open Palm</h2>
+          <p id="tutorialInstruction">Hold your hand in front of the camera. Take as much time as you need.</p>
+          <div class="tutorial-steps" aria-hidden="true">
+            <span class="active"></span><span></span><span></span><span></span><span></span>
+          </div>
         </div>
       </section>
     </div>
 
     <div id="attackBurst" class="attack-burst hidden"></div>
+
+    <audio id="backgroundMusic" autoplay loop preload="auto" aria-hidden="true">
+      <source src="assets/Kajjrat_Nurtas_-_Lambada_79414252.mp3" type="audio/mpeg" />
+    </audio>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>

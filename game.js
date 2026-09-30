@@ -14,6 +14,10 @@
   scoreMultiplier: 1,
   difficulty: 'medium',
   gameMode: 'solo',
+  isTraining: false,
+  tutorialComplete: false,
+  trainingStep: 0,
+  trainingAdvancing: false,
   lastFrame: 0,
   wave: 1,
   isPaused: false,
@@ -51,10 +55,25 @@ const startButton = typeof document !== 'undefined' ? document.getElementById('s
 const trackingStatus = typeof document !== 'undefined' ? document.getElementById('trackingStatus') : null;
 const difficultyButtons = typeof document !== 'undefined' ? document.querySelectorAll('[data-difficulty]') : [];
 const modeButtons = typeof document !== 'undefined' ? document.querySelectorAll('[data-mode]') : [];
+const levelSelection = typeof document !== 'undefined' ? document.querySelectorAll('.level-selection') : [];
+const startTitle = typeof document !== 'undefined' ? document.getElementById('startTitle') : null;
+const startDescription = typeof document !== 'undefined' ? document.getElementById('startDescription') : null;
+const startHint = typeof document !== 'undefined' ? document.getElementById('startHint') : null;
+const tutorialScreen = typeof document !== 'undefined' ? document.getElementById('tutorialScreen') : null;
+const tutorialPanel = typeof document !== 'undefined' ? document.getElementById('tutorialPanel') : null;
+const tutorialProgress = typeof document !== 'undefined' ? document.getElementById('tutorialProgress') : null;
+const tutorialTitle = typeof document !== 'undefined' ? document.getElementById('tutorialTitle') : null;
+const tutorialInstruction = typeof document !== 'undefined' ? document.getElementById('tutorialInstruction') : null;
+const tutorialSteps = typeof document !== 'undefined' ? document.querySelectorAll('.tutorial-steps span') : [];
+const bestScore = typeof document !== 'undefined' ? document.getElementById('bestScore') : null;
+const recordsList = typeof document !== 'undefined' ? document.getElementById('recordsList') : null;
+const gameOverRecords = typeof document !== 'undefined' ? document.getElementById('gameOverRecords') : null;
 let mediaPipeAttached = false;
 let cameraStarted = false;
 
 const gestures = ['Open Palm', 'Fist', 'Victory', 'Pointing', 'Thumbs Up'];
+const trainingGestures = [...gestures];
+const RECORDS_KEY = 'temple-guardian-records-v1';
 const difficultyConfig = {
   easy: { hitWindowMs: 280, nextNoteDelayMs: 900, noteTravelMs: 2200, mistakeDamage: 5, scoreMultiplier: 0.8 },
   medium: { hitWindowMs: 180, nextNoteDelayMs: 700, noteTravelMs: 1500, mistakeDamage: 8, scoreMultiplier: 1 },
@@ -65,6 +84,54 @@ const modeConfig = {
   dual: { scoreMultiplier: 1.35 },
   split: { scoreMultiplier: 1.6 },
 };
+
+function loadRecords() {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const savedRecords = JSON.parse(window.localStorage.getItem(RECORDS_KEY) ?? '[]');
+    return Array.isArray(savedRecords)
+      ? savedRecords.filter((record) => Number.isFinite(record.score)).sort((first, second) => second.score - first.score).slice(0, 5)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderRecordList(list, records) {
+  if (!list) return;
+  list.replaceChildren();
+  if (!records.length) {
+    const item = document.createElement('li');
+    item.textContent = 'No completed runs yet.';
+    list.appendChild(item);
+    return;
+  }
+  records.forEach((record, index) => {
+    const item = document.createElement('li');
+    item.textContent = `#${index + 1} ${record.score} - ${record.difficulty} / ${record.mode}`;
+    list.appendChild(item);
+  });
+}
+
+function renderRecords(records = loadRecords()) {
+  if (bestScore) bestScore.textContent = String(records[0]?.score ?? 0);
+  renderRecordList(recordsList, records);
+  renderRecordList(gameOverRecords, records);
+}
+
+function saveCompletedRun() {
+  const records = loadRecords();
+  const updatedRecords = [
+    ...records,
+    { score: state.score, difficulty: state.difficulty, mode: state.gameMode },
+  ].sort((first, second) => second.score - first.score).slice(0, 5);
+  try {
+    window.localStorage.setItem(RECORDS_KEY, JSON.stringify(updatedRecords));
+  } catch {
+    // A private browser mode may block storage; the current run still works.
+  }
+  renderRecords(updatedRecords);
+}
 const HAND_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4],
   [0, 5], [5, 6], [6, 7], [7, 8],
@@ -200,6 +267,65 @@ function setPrompt(prompt) {
   state.currentGesture = prompt;
   if (promptEl) promptEl.textContent = prompt;
   if (currentGestureLabel) currentGestureLabel.textContent = prompt;
+}
+
+function updateTrainingUi() {
+  const gesture = trainingGestures[state.trainingStep];
+  if (!gesture) return;
+  if (tutorialProgress) tutorialProgress.textContent = `Training ${state.trainingStep + 1} / ${trainingGestures.length}`;
+  if (tutorialTitle) tutorialTitle.textContent = `Show: ${gesture}`;
+  if (tutorialInstruction) tutorialInstruction.textContent = 'No timer - hold the gesture clearly in front of the camera.';
+  tutorialSteps.forEach((step, index) => step.classList.toggle('active', index === state.trainingStep));
+  setPrompt(`Training: ${gesture}`);
+}
+
+function startTraining() {
+  state.hasStarted = true;
+  state.isPaused = false;
+  state.isTraining = true;
+  state.trainingStep = 0;
+  state.trainingAdvancing = false;
+  document.querySelector('.game-shell')?.classList.add('training');
+  startScreen?.classList.add('hidden');
+  tutorialScreen?.classList.remove('hidden');
+  if (pauseButton) pauseButton.disabled = true;
+  requestGameFullscreen();
+  updateTrainingUi();
+  startCamera();
+}
+
+function completeTrainingStep() {
+  if (state.trainingAdvancing) return;
+  state.trainingAdvancing = true;
+  tutorialPanel?.classList.add('correct');
+  showCombatFeedback('GREAT! Gesture recognized', 'success');
+  triggerAttackVisual();
+
+  setTimeout(() => {
+    tutorialPanel?.classList.remove('correct');
+    state.trainingStep += 1;
+    state.trainingAdvancing = false;
+    if (state.trainingStep < trainingGestures.length) {
+      updateTrainingUi();
+      return;
+    }
+    finishTraining();
+  }, 720);
+}
+
+function finishTraining() {
+  state.isTraining = false;
+  state.hasStarted = false;
+  state.tutorialComplete = true;
+  document.querySelector('.game-shell')?.classList.remove('training');
+  tutorialScreen?.classList.add('hidden');
+  startScreen?.classList.remove('hidden');
+  levelSelection.forEach((element) => element.classList.remove('hidden'));
+  if (startTitle) startTitle.textContent = 'Training complete!';
+  if (startDescription) startDescription.textContent = 'Choose a difficulty and hand mode, then defend the Temple.';
+  if (startButton) startButton.textContent = 'Start level';
+  if (startHint) startHint.textContent = 'Match gestures when notes reach the center line.';
+  renderRecords();
 }
 
 function randomGesture(except = null) {
@@ -360,6 +486,7 @@ function finishGame(isVictory = false) {
   if (finalScore) finalScore.textContent = String(state.score);
   if (gameOverEyebrow) gameOverEyebrow.textContent = isVictory ? 'Temple protected' : 'Temple fallen';
   if (gameOverTitle) gameOverTitle.textContent = isVictory ? 'Victory!' : 'Run ended';
+  saveCompletedRun();
   gameOverScreen?.classList.remove('hidden');
 }
 
@@ -400,6 +527,12 @@ function matchesCurrentNote(input) {
 
 function handleGestureInput(input) {
   if (!input) return;
+  if (state.isTraining) {
+    const expectedGesture = trainingGestures[state.trainingStep];
+    const detectedGestures = typeof input === 'string' ? [input] : Object.values(input);
+    if (detectedGestures.includes(expectedGesture)) completeTrainingStep();
+    return;
+  }
   if (!state.hasStarted || state.isPaused) return;
   const now = performance.now();
 
@@ -528,6 +661,10 @@ function classifyHand(landmarks) {
   return null;
 }
 
+function getMirroredHandSide(handednessLabel) {
+  return handednessLabel === 'Right' ? 'left' : 'right';
+}
+
 function drawLandmarks(landmarks, shouldClear = true) {
   if (!gestureCtx || !gestureCanvas) return;
 
@@ -577,7 +714,7 @@ function onHandResults(results) {
     const poseLandmarks = results.multiHandWorldLandmarks?.[index] ?? imageLandmarks;
     const handedness = results.multiHandedness?.[index];
     const label = handedness?.label ?? handedness?.[0]?.label ?? (index === 0 ? 'Left' : 'Right');
-    const side = label.toLowerCase().includes('right') ? 'right' : 'left';
+    const side = getMirroredHandSide(label);
     detectedHands[side] = classifyHand(poseLandmarks);
     drawLandmarks(imageLandmarks, false);
   });
@@ -646,7 +783,14 @@ async function startCamera() {
 
   try {
     cameraFeed.addEventListener('resize', ensureCanvasSize);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
     cameraFeed.srcObject = stream;
 
     cameraFeed.onloadedmetadata = () => {
@@ -662,11 +806,16 @@ async function startCamera() {
 }
 
 function startGame() {
+  if (!state.tutorialComplete) {
+    startTraining();
+    return;
+  }
   if (state.hasStarted) return;
   state.hasStarted = true;
   state.isPaused = false;
+  document.querySelector('.game-shell')?.classList.remove('training');
   startScreen?.classList.add('hidden');
-  requestGameFullscreen();
+  if (pauseButton) pauseButton.disabled = false;
   updateHud();
   setPrompt(gestures[0]);
   spawnNote();
@@ -732,6 +881,7 @@ function bootGame() {
   setPrompt(gestures[0]);
   applyDifficulty('medium');
   applyGameMode('solo');
+  renderRecords();
   enableCameraDragging();
 }
 
@@ -739,4 +889,4 @@ if (typeof document !== 'undefined') {
   bootGame();
 }
 
-export { classifyHand, pointDistance, jointAngle };
+export { classifyHand, getMirroredHandSide, pointDistance, jointAngle };
