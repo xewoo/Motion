@@ -1,10 +1,14 @@
 import {
   createRecognitionState,
+  detectZoomPinch,
   detectGrabbing,
   detectSixSeven,
   facialExpression,
   gestureLabel,
   HAND_CONNECTIONS,
+  pinchZoomTarget,
+  physicalHandedness,
+  smoothZoom,
   stabilizeExpression,
   stabilizeGesture,
 } from "./recognition.js";
@@ -52,6 +56,7 @@ const elements = {
   camera: document.querySelector("#camera"),
   overlay: document.querySelector("#overlay"),
   cameraFrame: document.querySelector("#cameraFrame"),
+  zoomIndicator: document.querySelector("#zoomIndicator"),
   placeholder: document.querySelector("#placeholder"),
   statusMessage: document.querySelector("#statusMessage"),
   systemStatus: document.querySelector("#systemStatus"),
@@ -90,6 +95,13 @@ let intervalStarted = performance.now();
 let processedFrames = 0;
 let fps = 0;
 let stopping = false;
+let cameraZoom = 1;
+let zoomTarget = 1;
+let zoomActivationFrames = 0;
+let zoomGestureActive = false;
+let zoomAnchorPinch = null;
+let zoomAnchorScale = 1;
+let lastZoomUpdateTime = null;
 
 function setStatus(message, isError = false) {
   elements.statusMessage.textContent = message;
@@ -204,10 +216,49 @@ function stopCamera(message = "Камера выключена.") {
   currentResult = null;
   objectDetections = [];
   faceResult = null;
+  resetCameraZoom();
   updateSummary(null);
   setRunning(false);
   setStatus(message);
   stopping = false;
+}
+
+function updateCameraZoom(result, now) {
+  const pinchDistance = detectZoomPinch(result);
+  if (pinchDistance === null) {
+    zoomActivationFrames = 0;
+    zoomGestureActive = false;
+    zoomAnchorPinch = null;
+  } else if (!zoomGestureActive) {
+    zoomActivationFrames += 1;
+    if (zoomActivationFrames >= 3) {
+      zoomGestureActive = true;
+      zoomAnchorPinch = pinchDistance;
+      zoomAnchorScale = cameraZoom;
+    }
+  } else if (zoomAnchorPinch !== null) {
+    zoomTarget = pinchZoomTarget(zoomAnchorScale, zoomAnchorPinch, pinchDistance);
+  }
+
+  const elapsed = lastZoomUpdateTime === null ? 0 : Math.max(0, now - lastZoomUpdateTime);
+  lastZoomUpdateTime = now;
+  cameraZoom = smoothZoom(cameraZoom, zoomTarget, elapsed);
+  elements.cameraFrame.style.setProperty("--camera-zoom", cameraZoom.toFixed(3));
+  elements.zoomIndicator.textContent = `${zoomGestureActive ? "МАСШТАБ" : "ЗУМ"} ${cameraZoom.toFixed(1)}×`;
+  elements.zoomIndicator.classList.toggle("is-active", zoomGestureActive);
+}
+
+function resetCameraZoom() {
+  cameraZoom = 1;
+  zoomTarget = 1;
+  zoomActivationFrames = 0;
+  zoomGestureActive = false;
+  zoomAnchorPinch = null;
+  zoomAnchorScale = 1;
+  lastZoomUpdateTime = null;
+  elements.cameraFrame.style.setProperty("--camera-zoom", "1");
+  elements.zoomIndicator.textContent = "ЗУМ 1.0×";
+  elements.zoomIndicator.classList.remove("is-active");
 }
 
 function processFrame(now) {
@@ -233,6 +284,7 @@ function processFrame(now) {
       }
       const sixSevenScore = detectSixSeven(currentResult.landmarks, recognitionState, now / 1000);
       const grabbingScores = detectGrabbing(currentResult.worldLandmarks, currentResult.landmarks, recognitionState);
+      updateCameraZoom(currentResult, now);
       drawFrame(currentResult, sixSevenScore, grabbingScores);
       updateSummary(currentResult, sixSevenScore, grabbingScores);
       frameCount += 1;
@@ -297,7 +349,8 @@ function drawFrame(result, sixSevenScore, grabbingScores) {
     } else {
       [label, score] = stabilizeGesture(label, score, recognitionState.gestureHistory[handIndex]);
     }
-    const handedness = result.handedness?.[handIndex]?.[0]?.categoryName ?? "Hand";
+    const reportedHandedness = result.handedness?.[handIndex]?.[0]?.categoryName;
+    const handedness = physicalHandedness(reportedHandedness) ?? "Hand";
     const labelText = `${displayGesture(label)} · ${handedness} ${Math.round(score * 100)}%`;
     const left = width - Math.max(...points.map(([x]) => x));
     const top = Math.min(...points.map(([, y]) => y));

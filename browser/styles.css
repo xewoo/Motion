@@ -82,8 +82,8 @@ button, select { font: inherit; }
 }
 
 #camera, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-#camera { transform: scaleX(-1); }
-#overlay { transform: scaleX(-1); pointer-events: none; }
+#camera, #overlay { transform: scale(var(--camera-zoom, 1)) scaleX(-1); transition: transform 90ms linear; }
+#overlay { pointer-events: none; }
 .camera-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #f3f4f8; text-align: center; }
 .camera-placeholder strong { margin-top: 6px; font-size: 16px; }
 .camera-placeholder span { color: #858a99; font-size: 12px; }
@@ -92,6 +92,9 @@ button, select { font: inherit; }
 .camera-badge { position: absolute; top: 15px; left: 15px; z-index: 2; display: none; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(10, 12, 18, .68); color: white; font-size: 10px; font-weight: 750; letter-spacing: 1px; backdrop-filter: blur(8px); }
 .camera-frame.is-live .camera-badge { display: inline-flex; }
 .camera-frame.is-live .camera-placeholder { display: none; }
+.zoom-indicator { position: absolute; right: 15px; bottom: 15px; z-index: 2; display: none; padding: 7px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(10, 12, 18, .72); color: white; font-size: 10px; font-weight: 750; letter-spacing: .5px; backdrop-filter: blur(8px); }
+.camera-frame.is-live .zoom-indicator { display: block; }
+.zoom-indicator.is-active { border-color: rgba(180,243,91,.4); color: var(--accent); }
 
 .camera-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding-top: 14px; }
 .camera-actions { display: flex; flex-wrap: wrap; gap: 9px; }

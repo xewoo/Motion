@@ -25,6 +25,41 @@ export function pointDistance(first, second) {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
+export function physicalHandedness(reportedHandedness) {
+  // MediaPipe assumes mirrored input, while the camera frame is passed unmirrored.
+  if (reportedHandedness === "Left") return "Right";
+  if (reportedHandedness === "Right") return "Left";
+  return reportedHandedness;
+}
+
+export function detectZoomPinch(result) {
+  if (result.landmarks?.length !== 1) return null;
+  const reportedHandedness = result.handedness?.[0]?.[0]?.categoryName;
+  if (physicalHandedness(reportedHandedness) !== "Right") return null;
+
+  const landmarks = result.worldLandmarks?.[0] ?? result.landmarks[0];
+  if (!landmarks || landmarks.length < 21) return null;
+  const curled = [[9, 10, 12], [13, 14, 16], [17, 18, 20]].every(([mcp, pip, tip]) => (
+    jointAngle(landmarks[mcp], landmarks[pip], landmarks[tip]) <= 135
+  ));
+  if (!curled) return null;
+
+  const palmWidth = pointDistance(landmarks[5], landmarks[17]);
+  if (palmWidth < 1e-6) return null;
+  return pointDistance(landmarks[4], landmarks[8]) / palmWidth;
+}
+
+export function pinchZoomTarget(anchorScale, anchorPinch, pinchDistance) {
+  const delta = pinchDistance - anchorPinch;
+  const effectiveDelta = Math.sign(delta) * Math.max(0, Math.abs(delta) - 0.06);
+  return Math.max(1, Math.min(2.5, anchorScale + effectiveDelta * 8));
+}
+
+export function smoothZoom(current, target, elapsedMs) {
+  const smoothing = 1 - Math.exp(-Math.max(0, elapsedMs) / 120);
+  return current + (target - current) * smoothing;
+}
+
 export function jointAngle(first, middle, last) {
   const firstVector = [first.x - middle.x, first.y - middle.y, first.z - middle.z];
   const lastVector = [last.x - middle.x, last.y - middle.y, last.z - middle.z];
