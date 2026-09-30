@@ -197,6 +197,42 @@ function ensureCanvasSize() {
   }
 }
 
+function enableCameraDragging() {
+  if (!cameraPanel || !cameraHeader) return;
+
+  cameraHeader.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('button')) return;
+
+    const panelRect = cameraPanel.getBoundingClientRect();
+    state.dragState = {
+      offsetX: event.clientX - panelRect.left,
+      offsetY: event.clientY - panelRect.top,
+    };
+    event.preventDefault();
+  });
+
+  window.addEventListener('pointermove', (event) => {
+    if (!state.dragState) return;
+
+    const panelRect = cameraPanel.getBoundingClientRect();
+    const maxLeft = Math.max(0, window.innerWidth - panelRect.width);
+    const maxTop = Math.max(0, window.innerHeight - panelRect.height);
+    const left = clamp(event.clientX - state.dragState.offsetX, 0, maxLeft);
+    const top = clamp(event.clientY - state.dragState.offsetY, 0, maxTop);
+
+    cameraPanel.style.left = `${left}px`;
+    cameraPanel.style.top = `${top}px`;
+    cameraPanel.style.right = 'auto';
+    cameraPanel.style.bottom = 'auto';
+  });
+
+  const stopDragging = () => {
+    state.dragState = null;
+  };
+  window.addEventListener('pointerup', stopDragging);
+  window.addEventListener('pointercancel', stopDragging);
+}
+
 function applyDifficulty(difficulty) {
   const settings = difficultyConfig[difficulty];
   if (!settings) return;
@@ -846,6 +882,7 @@ function bootGame() {
   applyDifficulty('medium');
   applyGameMode('solo');
   renderRecords();
+  enableCameraDragging();
 }
 
 if (typeof document !== 'undefined') {

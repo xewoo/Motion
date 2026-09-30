@@ -4,16 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Temple Guardian</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260930-2" />
   </head>
   <body>
     <div class="game-shell">
       <div class="background-scene">
         <div class="sky-glow"></div>
-        <div class="temple">
-          <div class="temple-door"></div>
-          <div class="pillar pillar-left"></div>
-          <div class="pillar pillar-right"></div>
+        <div class="scene-actors">
+          <div class="energy-fist">
+            <div class="fist-core"></div>
+            <div class="fist-particle p1"></div>
+            <div class="fist-particle p2"></div>
+            <div class="fist-particle p3"></div>
+            <div class="fist-particle p4"></div>
+            <div class="fist-particle p5"></div>
+            <div class="fist-particle p6"></div>
+          </div>
+
+          <div class="temple">
+            <div class="temple-door"></div>
+            <div class="pillar pillar-left"></div>
+            <div class="pillar pillar-right"></div>
+          </div>
         </div>
       </div>
 
@@ -134,8 +146,12 @@
 
     <div id="attackBurst" class="attack-burst hidden"></div>
 
+    <audio id="backgroundMusic" autoplay loop preload="auto" aria-hidden="true">
+      <source src="assets/Kajjrat_Nurtas_-_Lambada_79414252.mp3" type="audio/mpeg" />
+    </audio>
+
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script type="module" src="game.js"></script>
+    <script type="module" src="game.js?v=20260930-2"></script>
   </body>
 </html>
