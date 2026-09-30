@@ -130,13 +130,27 @@ body {
   position: absolute;
   left: 50%;
   top: 52%;
-  width: clamp(210px, 18vw, 330px);
-  height: clamp(210px, 18vw, 330px);
+  width: clamp(260px, 22vw, 420px);
+  height: clamp(260px, 22vw, 420px);
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(175, 245, 255, 0.96) 0%, rgba(118, 255, 226, 0.45) 18%, rgba(120, 147, 255, 0.18) 32%, rgba(26, 44, 53, 0) 68%);
-  box-shadow: 0 0 30px rgba(125, 243, 197, 0.4), 0 0 80px rgba(95, 188, 255, 0.18);
-  animation: energyPulse 2.8s ease-in-out infinite alternate;
+  box-shadow: 0 0 44px rgba(125, 243, 197, 0.52), 0 0 110px rgba(95, 188, 255, 0.3);
+  animation: energyOrbFloat 9s ease-in-out infinite;
+  will-change: transform, filter, box-shadow;
+}
+
+@keyframes energyOrbFloat {
+  0%, 100% {
+    transform: translate(-50%, calc(-50% + 14px)) scale(0.98);
+    filter: brightness(0.94);
+    box-shadow: 0 0 38px rgba(125, 243, 197, 0.42), 0 0 90px rgba(95, 188, 255, 0.22);
+  }
+  50% {
+    transform: translate(-50%, calc(-50% - 18px)) scale(1.04);
+    filter: brightness(1.18);
+    box-shadow: 0 0 58px rgba(125, 243, 197, 0.7), 0 0 140px rgba(95, 188, 255, 0.42);
+  }
 }
 
 .energy-fist::before {
