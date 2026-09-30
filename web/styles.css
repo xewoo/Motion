@@ -1,0 +1,393 @@
+:root {
+  --bg-dark: #07141b;
+  --bg-mid: #0d2530;
+  --temple-gold: #f2c26b;
+  --temple-glow: rgba(242, 194, 107, 0.4);
+  --danger-red: #ff4d4d;
+  --success-green: #7bf1b3;
+  --sky-cyan: #8cdcf6;
+  --panel: rgba(7, 20, 27, 0.68);
+  --panel-border: rgba(255, 255, 255, 0.14);
+  --text: #edf6ff;
+  --muted: #9bb0c5;
+  --lane: rgba(255, 255, 255, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top, #1f3b42 0%, var(--bg-dark) 55%);
+  color: var(--text);
+  font-family: Segoe UI, Tahoma, sans-serif;
+}
+
+.game-shell {
+  position: relative;
+  width: min(1400px, 95vw);
+  height: min(860px, 92vh);
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(9, 18, 25, 0.78), rgba(7, 20, 27, 0.9));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.background-scene {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(13, 37, 48, 0.3), rgba(7, 20, 27, 0.8));
+}
+
+.sky-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(140, 220, 246, 0.2), transparent 35%);
+}
+
+.temple {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(760px, 60%);
+  height: 420px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(91, 104, 116, 0.3), rgba(16, 21, 32, 0.88));
+  border-top: 2px solid rgba(242, 194, 107, 0.5);
+  border-radius: 22px 22px 0 0;
+  box-shadow: inset 0 0 40px rgba(242, 194, 107, 0.08);
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.temple-hit {
+  animation: templeHit 0.35s ease-out;
+}
+
+@keyframes templeHit {
+  0% { transform: translateX(-50%) scale(1); filter: brightness(1); }
+  30% { transform: translateX(-50%) scale(0.98); filter: brightness(1.2); }
+  100% { transform: translateX(-50%) scale(1); filter: brightness(0.85); }
+}
+
+.temple::before,
+.temple::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 22%;
+  height: 85%;
+  background: rgba(24, 35, 45, 0.8);
+  border: 1px solid rgba(242, 194, 107, 0.2);
+}
+
+.temple::before {
+  left: 12%;
+}
+
+.temple::after {
+  right: 12%;
+}
+
+.temple-door {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 24%;
+  height: 52%;
+  background: linear-gradient(180deg, rgba(91, 77, 43, 0.85), rgba(14, 17, 24, 0.95));
+  border: 2px solid rgba(242, 194, 107, 0.65);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 0 40px rgba(242, 194, 107, 0.16);
+}
+
+.pillar {
+  position: absolute;
+  bottom: 0;
+  width: 8%;
+  height: 75%;
+  background: rgba(27, 34, 44, 0.8);
+  border: 1px solid rgba(242, 194, 107, 0.14);
+}
+
+.pillar-left { left: 22%; }
+.pillar-right { right: 22%; }
+
+.monster {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50% 44% 52% 48%;
+  background: radial-gradient(circle at 30% 30%, rgba(88, 189, 141, 0.85), rgba(17, 53, 46, 0.9));
+  box-shadow: 0 0 28px rgba(80, 255, 165, 0.22);
+  border: 2px solid rgba(111, 255, 200, 0.2);
+  bottom: 118px;
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.monster::before {
+  content: "";
+  position: absolute;
+  inset: 18px 24px auto 24px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.monster-hit {
+  animation: monsterHit 0.45s ease-out;
+}
+
+@keyframes monsterHit {
+  0% { transform: translateX(0) scale(1); filter: brightness(1); box-shadow: 0 0 28px rgba(80, 255, 165, 0.22); }
+  35% { transform: translateX(-18px) scale(1.1); filter: brightness(1.4); box-shadow: 0 0 36px rgba(255, 124, 139, 0.48); }
+  100% { transform: translateX(0) scale(0.92); filter: brightness(0.8); box-shadow: 0 0 20px rgba(255, 124, 139, 0.2); }
+}
+
+.monster-1 { left: 9%; }
+.monster-2 { left: 46%; }
+.monster-3 { right: 9%; }
+
+.hud {
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  right: 30px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 18px;
+  z-index: 5;
+}
+
+.hud-block,
+.combo-box,
+.score-box,
+.prompt-box,
+.camera-panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+}
+
+.hud-block {
+  padding: 12px 16px;
+}
+
+.hud-center {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.combo-box,
+.score-box {
+  min-width: 120px;
+  padding: 12px 18px;
+  text-align: center;
+}
+
+.label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.label.small {
+  font-size: 0.6rem;
+}
+
+.bar {
+  margin-top: 8px;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bar-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+.temple-fill {
+  background: linear-gradient(90deg, #7bf1b3, #4fef94, #67d8ff);
+}
+
+.enemy-fill {
+  background: linear-gradient(90deg, #ff8d8d, #ff4969);
+}
+
+.arena {
+  position: absolute;
+  inset: 110px 0 0 0;
+  z-index: 4;
+}
+
+.prompt-box {
+  position: absolute;
+  left: 50%;
+  top: 28px;
+  transform: translateX(-50%);
+  min-width: 240px;
+  text-align: center;
+  padding: 14px 20px;
+  box-shadow: 0 0 30px rgba(123, 241, 179, 0.16);
+}
+
+.gesture-prompt {
+  margin-top: 4px;
+  font-size: clamp(1.6rem, 2.2vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--temple-gold);
+}
+
+.lane-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 42px;
+  transform: translateX(-50%);
+  width: min(780px, 70%);
+  height: 240px;
+  border-radius: 18px;
+  background: rgba(13, 30, 40, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lane-title {
+  position: absolute;
+  left: 18px;
+  top: 12px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.note-lane {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.note {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -40px;
+  width: 120px;
+  height: 38px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(123, 241, 179, 0.8), rgba(90, 186, 255, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 15px 35px rgba(90, 186, 255, 0.2);
+  animation: laneMove 2.5s linear forwards;
+}
+
+@keyframes laneMove {
+  0% { transform: translate(-50%, -40px); }
+  100% { transform: translate(-50%, 200px); }
+}
+
+.camera-panel {
+  position: absolute;
+  right: 34px;
+  bottom: 30px;
+  width: 290px;
+  height: 220px;
+  z-index: 7;
+  overflow: hidden;
+}
+
+.camera-header {
+  padding: 8px 12px;
+  background: rgba(7, 20, 27, 0.7);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+}
+
+.camera-stage {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 38px);
+  overflow: hidden;
+}
+
+#cameraFeed,
+#gestureCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #020c12;
+}
+
+#cameraFeed {
+  transform: scaleX(-1);
+}
+
+#gestureCanvas {
+  pointer-events: none;
+}
+
+.camera-overlay {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.36);
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.attack-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  z-index: 10;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(123, 241, 179, 0.28), transparent 70%);
+  opacity: 0;
+}
+
+.attack-burst.show {
+  opacity: 1;
+  animation: burst 0.5s ease-out;
+}
+
+@keyframes burst {
+  0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+
+.hidden { display: none; }

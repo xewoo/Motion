@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temple Guardian</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="game-shell">
+      <div class="background-scene">
+        <div class="sky-glow"></div>
+        <div class="temple">
+          <div class="temple-door"></div>
+          <div class="pillar pillar-left"></div>
+          <div class="pillar pillar-right"></div>
+        </div>
+        <div class="monster monster-1"></div>
+        <div class="monster monster-2"></div>
+        <div class="monster monster-3"></div>
+      </div>
+
+      <header class="hud">
+        <div class="hud-block">
+          <span class="label">Temple HP</span>
+          <div class="bar">
+            <div id="templeHealth" class="bar-fill temple-fill"></div>
+          </div>
+        </div>
+
+        <div class="hud-center">
+          <div class="combo-box">
+            <span class="label">Combo</span>
+            <strong id="comboValue">0x</strong>
+          </div>
+          <div class="score-box">
+            <span class="label">Score</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+        </div>
+
+        <div class="hud-block">
+          <span class="label">Enemy HP</span>
+          <div class="bar">
+            <div id="enemyHealth" class="bar-fill enemy-fill"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="arena">
+        <div id="promptBox" class="prompt-box">
+          <span class="label small">Next gesture</span>
+          <div id="gesturePrompt" class="gesture-prompt">Open Palm</div>
+        </div>
+
+        <div class="lane-wrap">
+          <div class="lane-title">Rhythm lane</div>
+          <div id="noteLane" class="note-lane"></div>
+        </div>
+      </main>
+
+      <aside class="camera-panel">
+        <div class="camera-header">
+          <span>Player Camera</span>
+        </div>
+        <div class="camera-stage">
+          <video id="cameraFeed" autoplay playsinline muted></video>
+          <canvas id="gestureCanvas"></canvas>
+        </div>
+        <div class="camera-overlay">
+          <span id="currentGestureLabel">Waiting...</span>
+        </div>
+      </aside>
+    </div>
+
+    <div id="attackBurst" class="attack-burst hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>
