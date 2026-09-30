@@ -1,4 +1,4 @@
-name: Deploy browser app to GitHub Pages
+name: Deploy Temple Guardian to GitHub Pages
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "browser/**"
+      - "web/**"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -27,10 +28,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Upload browser app
+      - name: Upload Temple Guardian
         uses: actions/upload-pages-artifact@v3
         with:
-          path: browser
+          path: web
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

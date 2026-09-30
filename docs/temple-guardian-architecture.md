@@ -59,8 +59,9 @@ Temple Guardian is a rhythm-defense game where the player protects a temple agai
 ## Deployment plan
 
 ### GitHub Pages
-- Host static app from the `web/` folder
-- Use GitHub Actions to deploy automatically on push to `main`
+- The `.github/workflows/deploy-pages.yml` workflow publishes the `web/` folder automatically on pushes to `main` that change `web/`.
+- The current game is a static browser app and does not require an Azure server; camera access and gesture recognition run in the browser.
+- The optional API and persistent score storage described below are not connected to the game yet.
 
 ### Azure API
 - Deploy FastAPI application from `api/` with Azure App Service or Container Apps
