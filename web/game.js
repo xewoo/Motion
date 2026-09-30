@@ -431,6 +431,10 @@ function classifyHand(landmarks) {
   const allFingersCurled = Object.values(fingerAngles).every((angle) => angle <= 135);
   const handScale = pointDistance(landmarks[0], landmarks[9]);
   const thumbPointsUp = landmarks[4].y < landmarks[0].y - handScale * 0.12;
+  const allFingersExtended = Object.values(fingerAngles).every((angle) => angle >= 145);
+  const middleCurled = fingerAngles.middle <= 135;
+  const ringCurled = fingerAngles.ring <= 135;
+  const pinkyCurled = fingerAngles.pinky <= 135;
 
   if (thumbIsExtended && thumbPointsUp && allFingersCurled) {
     return 'Thumbs Up';
@@ -440,11 +444,11 @@ function classifyHand(landmarks) {
     return 'Fist';
   }
 
-  if (indexExtended && middleExtended && ringExtended && pinkyExtended && thumbIsExtended) {
+  if (allFingersExtended) {
     return 'Open Palm';
   }
 
-  if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbIsExtended) {
+  if (indexExtended && middleCurled && ringCurled && pinkyCurled && !thumbIsExtended) {
     return 'Pointing';
   }
 
@@ -452,7 +456,7 @@ function classifyHand(landmarks) {
     return 'Thumbs Up';
   }
 
-  if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
+  if (indexExtended && middleExtended && ringCurled && pinkyCurled) {
     return 'Victory';
   }
 
@@ -501,9 +505,10 @@ function onHandResults(results) {
     return;
   }
 
-  const landmarks = results.multiHandLandmarks[0];
-  const detectedGesture = classifyHand(landmarks);
-  drawLandmarks(landmarks);
+  const imageLandmarks = results.multiHandLandmarks[0];
+  const poseLandmarks = results.multiHandWorldLandmarks?.[0] ?? imageLandmarks;
+  const detectedGesture = classifyHand(poseLandmarks);
+  drawLandmarks(imageLandmarks);
 
   if (detectedGesture) {
     state.lastDetectedGesture = detectedGesture;
@@ -533,8 +538,8 @@ function attachMediaPipe() {
   hands.setOptions({
     maxNumHands: 1,
     modelComplexity: 1,
-    minDetectionConfidence: 0.6,
-    minTrackingConfidence: 0.6,
+    minDetectionConfidence: 0.55,
+    minTrackingConfidence: 0.55,
   });
 
   hands.onResults(onHandResults);
@@ -543,8 +548,8 @@ function attachMediaPipe() {
     onFrame: async () => {
       await hands.send({ image: video });
     },
-    width: 320,
-    height: 240,
+    width: 640,
+    height: 480,
   });
 
   camera.start();
