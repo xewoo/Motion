@@ -1,0 +1,152 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temple Guardian</title>
+    <link rel="stylesheet" href="styles.css?v=20260930-2" />
+  </head>
+  <body>
+    <div class="game-shell">
+      <div class="background-scene">
+        <div class="sky-glow"></div>
+        <div class="scene-actors">
+          <div class="mage-tower">
+            <div class="tower-top"></div>
+            <div class="tower-rune rune-1"></div>
+            <div class="tower-rune rune-2"></div>
+            <div class="tower-rune rune-3"></div>
+            <div class="tower-crystal crystal-1"></div>
+            <div class="tower-crystal crystal-2"></div>
+            <div class="tower-crystal crystal-3"></div>
+          </div>
+
+          <div class="energy-fist">
+            <div class="fist-core"></div>
+            <div class="fist-particle p1"></div>
+            <div class="fist-particle p2"></div>
+            <div class="fist-particle p3"></div>
+            <div class="fist-particle p4"></div>
+            <div class="fist-particle p5"></div>
+            <div class="fist-particle p6"></div>
+          </div>
+
+          <div class="orc-formation">
+            <div class="orc orc-1"></div>
+            <div class="orc orc-2"></div>
+            <div class="orc orc-3"></div>
+            <div class="orc orc-4"></div>
+            <div class="orc orc-5"></div>
+            <div class="orc orc-6"></div>
+          </div>
+
+          <div class="temple">
+            <div class="temple-door"></div>
+            <div class="pillar pillar-left"></div>
+            <div class="pillar pillar-right"></div>
+          </div>
+        </div>
+      </div>
+
+      <header class="hud">
+        <div class="hud-block">
+          <span class="label">Temple HP</span>
+          <div class="bar">
+            <div id="templeHealth" class="bar-fill temple-fill"></div>
+          </div>
+        </div>
+
+        <div class="hud-center">
+          <div class="combo-box">
+            <span class="label">Combo</span>
+            <strong id="comboValue">0x</strong>
+          </div>
+          <div class="score-box">
+            <span class="label">Score</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+        </div>
+
+        <div class="hud-block">
+          <span class="label">Enemy HP</span>
+          <div class="bar">
+            <div id="enemyHealth" class="bar-fill enemy-fill"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="arena">
+        <div id="promptBox" class="prompt-box">
+          <span class="label small">Next gesture</span>
+          <div id="gesturePrompt" class="gesture-prompt">Open Palm</div>
+        </div>
+
+        <div class="lane-wrap">
+          <div class="lane-title">Rhythm lane</div>
+          <div id="timingCue" class="timing-cue" aria-live="polite">WAIT FOR CENTER</div>
+          <div class="monster monster-2"></div>
+          <div id="noteLane" class="note-lane"></div>
+        </div>
+      </main>
+
+      <aside class="camera-panel">
+        <div class="camera-header">
+          <span>Hand tracker</span>
+          <span id="trackingStatus" class="tracking-status">Camera off</span>
+          <button id="pauseGameButton" class="pause-button" type="button" aria-label="Pause game">Pause</button>
+        </div>
+        <div class="camera-stage">
+          <video id="cameraFeed" autoplay playsinline muted></video>
+          <canvas id="gestureCanvas"></canvas>
+        </div>
+        <div class="camera-overlay">
+          <span id="currentGestureLabel">Show your hand to begin</span>
+        </div>
+      </aside>
+
+      <div id="combatFeedback" class="combat-feedback" aria-live="polite" aria-atomic="true"></div>
+      <section id="gameOverScreen" class="game-over-screen hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+        <div class="game-over-panel">
+          <span id="gameOverEyebrow" class="label">Temple fallen</span>
+          <h1 id="gameOverTitle">Run ended</h1>
+          <p>Final score <strong id="finalScore">0</strong></p>
+          <button id="restartGameButton" class="restart-button" type="button">Play again</button>
+        </div>
+      </section>
+      <section id="startScreen" class="start-screen" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+        <div class="start-panel">
+          <span class="eyebrow">Gesture rhythm game</span>
+          <h1 id="startTitle">Defend the Temple</h1>
+          <p>Use your hand as the controller. Match the requested gesture when the note reaches the center line.</p>
+          <div class="gesture-guide" aria-label="Supported gestures">
+            <span>Open Palm</span><span>Fist</span><span>Victory</span><span>Pointing</span><span>Thumbs Up</span>
+          </div>
+          <fieldset class="difficulty-picker">
+            <legend>Choose a level</legend>
+            <div class="difficulty-options">
+              <button class="difficulty-button" type="button" data-difficulty="easy" aria-pressed="false">Easy <small>More time</small></button>
+              <button class="difficulty-button selected" type="button" data-difficulty="medium" aria-pressed="true">Medium <small>Balanced</small></button>
+              <button class="difficulty-button" type="button" data-difficulty="hard" aria-pressed="false">Hard <small>Fast notes</small></button>
+            </div>
+          </fieldset>
+          <fieldset class="mode-picker">
+            <legend>Choose a hand mode</legend>
+            <div class="mode-options">
+              <button class="mode-button selected" type="button" data-mode="solo" aria-pressed="true">Solo <small>One hand</small></button>
+              <button class="mode-button" type="button" data-mode="dual" aria-pressed="false">Two hands <small>Same gesture</small></button>
+              <button class="mode-button" type="button" data-mode="split" aria-pressed="false">Split hands <small>Different gestures</small></button>
+            </div>
+          </fieldset>
+          <button id="startGameButton" class="start-button" type="button">Start game</button>
+          <small>Your camera will be requested only after you press Start game.</small>
+        </div>
+      </section>
+    </div>
+
+    <div id="attackBurst" class="attack-burst hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script type="module" src="game.js?v=20260930-2"></script>
+  </body>
+</html>
