@@ -315,7 +315,10 @@ body {
   transform: translate(-50%, -50%);
   border-radius: 50% 42% 52% 48%;
   border: 2px solid rgba(118, 255, 208, 0.2);
-  background: radial-gradient(circle at 30% 30%, rgba(93, 182, 151, 0.9), rgba(15, 52, 46, 0.92));
+  background-image: url('./assets/14hq.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 0 0 30px rgba(80, 255, 165, 0.2);
   transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
@@ -323,10 +326,9 @@ body {
 .monster::before {
   content: "";
   position: absolute;
-  inset: 20px 24px auto 24px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .monster-hit {
@@ -334,9 +336,11 @@ body {
 }
 
 @keyframes monsterHit {
-  0% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); box-shadow: 0 0 30px rgba(80, 255, 165, 0.2); }
-  35% { transform: translate(-50%, -50%) scale(1.08); filter: brightness(1.35); box-shadow: 0 0 38px rgba(255, 110, 130, 0.45); }
-  100% { transform: translate(-50%, -50%) scale(0.9); filter: brightness(0.82); box-shadow: 0 0 18px rgba(255, 110, 130, 0.16); }
+  0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); filter: brightness(1); box-shadow: 0 0 30px rgba(80, 255, 165, 0.2); }
+  15% { transform: translate(-50%, -50%) scale(1.03) rotate(-1.5deg); }
+  35% { transform: translate(-50%, -50%) scale(1.08) rotate(1.8deg); filter: brightness(1.35); box-shadow: 0 0 38px rgba(255, 110, 130, 0.45); }
+  60% { transform: translate(-50%, -50%) scale(0.98) rotate(-1deg); }
+  100% { transform: translate(-50%, -50%) scale(0.96) rotate(0deg); filter: brightness(0.82); box-shadow: 0 0 18px rgba(255, 110, 130, 0.16); }
 }
 
 .hud {
