@@ -212,7 +212,7 @@ function setMusicVolume(value, save = true) {
 
 function restoreMusicVolume() {
   if (typeof window === 'undefined') return;
-  let savedVolume = 0.45;
+  let savedVolume = 0.5;
   try {
     const storedValue = Number(window.localStorage.getItem(MUSIC_VOLUME_KEY));
     if (Number.isFinite(storedValue)) savedVolume = storedValue;
@@ -368,20 +368,23 @@ function startTraining() {
 function completeTrainingStep() {
   if (state.trainingAdvancing) return;
   state.trainingAdvancing = true;
-  tutorialPanel?.classList.add('correct');
-  showCombatFeedback('GREAT! Gesture recognized', 'success');
-  triggerAttackVisual();
 
   setTimeout(() => {
-    tutorialPanel?.classList.remove('correct');
-    state.trainingStep += 1;
-    state.trainingAdvancing = false;
-    if (state.trainingStep < trainingGestures.length) {
-      updateTrainingUi();
-      return;
-    }
-    finishTraining();
-  }, 720);
+    tutorialPanel?.classList.add('correct');
+    showCombatFeedback('GREAT! Gesture recognized', 'success');
+    triggerAttackVisual();
+
+    setTimeout(() => {
+      tutorialPanel?.classList.remove('correct');
+      state.trainingStep += 1;
+      state.trainingAdvancing = false;
+      if (state.trainingStep < trainingGestures.length) {
+        updateTrainingUi();
+        return;
+      }
+      finishTraining();
+    }, 720);
+  }, 500);
 }
 
 function finishTraining() {
