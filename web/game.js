@@ -39,6 +39,9 @@ const enemyHealthEl = typeof document !== 'undefined' ? document.getElementById(
 const cameraFeed = typeof document !== 'undefined' ? document.getElementById('cameraFeed') : null;
 const currentGestureLabel = typeof document !== 'undefined' ? document.getElementById('currentGestureLabel') : null;
 const attackBurst = typeof document !== 'undefined' ? document.getElementById('attackBurst') : null;
+const backgroundMusic = typeof document !== 'undefined' ? document.getElementById('backgroundMusic') : null;
+const musicToggleButton = typeof document !== 'undefined' ? document.getElementById('musicToggleButton') : null;
+const musicVolume = typeof document !== 'undefined' ? document.getElementById('musicVolume') : null;
 const pauseButton = typeof document !== 'undefined' ? document.getElementById('pauseGameButton') : null;
 const cameraPanel = typeof document !== 'undefined' ? document.querySelector('.camera-panel') : null;
 const cameraHeader = typeof document !== 'undefined' ? document.querySelector('.camera-header') : null;
@@ -74,6 +77,7 @@ let cameraStarted = false;
 const gestures = ['Open Palm', 'Fist', 'Victory', 'Pointing', 'Thumbs Up'];
 const trainingGestures = [...gestures];
 const RECORDS_KEY = 'temple-guardian-records-v1';
+const MUSIC_VOLUME_KEY = 'temple-guardian-music-volume-v1';
 const difficultyConfig = {
   easy: { hitWindowMs: 280, nextNoteDelayMs: 900, noteTravelMs: 2200, mistakeDamage: 5, scoreMultiplier: 0.8 },
   medium: { hitWindowMs: 180, nextNoteDelayMs: 700, noteTravelMs: 1500, mistakeDamage: 8, scoreMultiplier: 1 },
@@ -179,6 +183,58 @@ function togglePause() {
   setPaused(!state.isPaused);
 }
 
+function updateMusicButton(isPlaying) {
+  if (!musicToggleButton) return;
+  musicToggleButton.textContent = `Music: ${isPlaying ? 'On' : 'Off'}`;
+  musicToggleButton.setAttribute('aria-pressed', String(isPlaying));
+  musicToggleButton.setAttribute('aria-label', `Turn music ${isPlaying ? 'off' : 'on'}`);
+}
+
+function setMusicVolume(value, save = true) {
+  const normalizedVolume = clamp(Number(value) / 100, 0, 1);
+  if (backgroundMusic) backgroundMusic.volume = normalizedVolume;
+  if (musicVolume) {
+    musicVolume.value = String(Math.round(normalizedVolume * 100));
+    musicVolume.setAttribute('aria-valuetext', `${Math.round(normalizedVolume * 100)} percent`);
+  }
+  if (!save || typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(MUSIC_VOLUME_KEY, String(normalizedVolume));
+  } catch {
+    // Volume still works when browser storage is unavailable.
+  }
+}
+
+function restoreMusicVolume() {
+  if (typeof window === 'undefined') return;
+  let savedVolume = 0.45;
+  try {
+    const storedValue = Number(window.localStorage.getItem(MUSIC_VOLUME_KEY));
+    if (Number.isFinite(storedValue)) savedVolume = storedValue;
+  } catch {
+    // Use the default volume when browser storage is unavailable.
+  }
+  setMusicVolume(savedVolume * 100, false);
+}
+
+async function toggleMusic() {
+  if (!backgroundMusic) return;
+
+  if (!backgroundMusic.paused) {
+    backgroundMusic.pause();
+    updateMusicButton(false);
+    return;
+  }
+
+  try {
+    await backgroundMusic.play();
+    updateMusicButton(true);
+  } catch (error) {
+    updateMusicButton(false);
+    console.warn('Background music could not be played.', error);
+  }
+}
+
 function setTimingCue(isReady) {
   if (timingCue) {
     timingCue.textContent = isReady ? 'GESTURE NOW' : 'WAIT FOR CENTER';
@@ -201,7 +257,7 @@ function enableCameraDragging() {
   if (!cameraPanel || !cameraHeader) return;
 
   cameraHeader.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('button')) return;
+    if (event.target.closest('button, input, label')) return;
 
     const panelRect = cameraPanel.getBoundingClientRect();
     state.dragState = {
@@ -858,6 +914,20 @@ if (pauseButton) {
   pauseButton.addEventListener('click', togglePause);
 }
 
+if (backgroundMusic) {
+  backgroundMusic.addEventListener('play', () => updateMusicButton(true));
+  backgroundMusic.addEventListener('pause', () => updateMusicButton(false));
+}
+
+if (musicToggleButton) {
+  musicToggleButton.addEventListener('click', toggleMusic);
+  updateMusicButton(backgroundMusic ? !backgroundMusic.paused : false);
+}
+
+if (musicVolume) {
+  musicVolume.addEventListener('input', () => setMusicVolume(musicVolume.value));
+}
+
 if (restartButton) {
   restartButton.addEventListener('click', restartGame);
 }
@@ -882,6 +952,7 @@ function bootGame() {
   applyDifficulty('medium');
   applyGameMode('solo');
   renderRecords();
+  restoreMusicVolume();
   enableCameraDragging();
 }
 

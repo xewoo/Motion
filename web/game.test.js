@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { classifyHand } from "./game.js";
+import { classifyHand, getMirroredHandSide } from "./game.js";
 
 const point = (x, y, z = 0) => ({ x, y, z });
 
@@ -99,6 +99,11 @@ function rotateLandmarks(landmarks, angleX, angleY, angleZ) {
     };
   });
 }
+
+test("handedness follows the mirrored camera preview", () => {
+  assert.equal(getMirroredHandSide("Left"), "right");
+  assert.equal(getMirroredHandSide("Right"), "left");
+});
 
 test("fist recognition stays valid across the frame and matches gesture prompts", () => {
   const center = makeGestureHand({ offsetX: 0, offsetY: 0, pose: "fist" });

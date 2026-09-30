@@ -192,22 +192,21 @@ body {
   position: absolute;
   top: 50%;
   z-index: 1;
-  width: clamp(126px, 10.5vw, 180px);
-  aspect-ratio: 0.68;
+  width: clamp(130px, 10vw, 176px);
+  aspect-ratio: 0.7;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(220, 185, 108, 0.92);
-  border-radius: 18% 18% 48% 48% / 10% 10% 76% 76%;
+  border: 3px solid rgba(215, 174, 91, 0.98);
+  border-radius: 14% 14% 48% 48% / 8% 8% 78% 78%;
   clip-path: polygon(50% 0, 94% 8%, 91% 69%, 50% 100%, 9% 69%, 6% 8%);
   background:
-    radial-gradient(circle at 50% 38%, rgba(255, 232, 165, 0.14), transparent 25%),
-    linear-gradient(145deg, rgba(55, 50, 39, 0.98), rgba(10, 11, 12, 0.98) 52%, rgba(31, 27, 20, 0.98));
+    linear-gradient(90deg, #b87822 0 28%, #141414 28% 51%, #c98d32 51% 72%, #181818 72% 100%);
   box-shadow:
-    inset 0 0 18px rgba(255, 220, 134, 0.16),
-    0 0 18px rgba(255, 206, 111, 0.34),
-    0 0 46px rgba(255, 177, 73, 0.14);
-  opacity: 0.95;
+    inset 0 0 20px rgba(255, 226, 148, 0.25),
+    0 0 18px rgba(255, 206, 111, 0.42),
+    0 0 46px rgba(255, 177, 73, 0.2);
+  opacity: 0.98;
   pointer-events: none;
   will-change: transform, filter, box-shadow;
 }
@@ -216,15 +215,15 @@ body {
 .guardian-shield::after {
   content: "";
   position: absolute;
-  inset: 7px;
-  border: 1px solid rgba(236, 203, 131, 0.62);
-  border-radius: 18% 18% 44% 44% / 11% 11% 69% 69%;
+  inset: 5px;
+  border: 1px solid rgba(255, 222, 137, 0.9);
+  border-radius: 14% 14% 46% 46% / 8% 8% 76% 76%;
   clip-path: polygon(50% 0, 94% 8%, 91% 69%, 50% 100%, 9% 69%, 6% 8%);
 }
 
 .guardian-shield::after {
-  inset: 14px;
-  border-color: rgba(158, 132, 77, 0.48);
+  inset: 12px;
+  border-color: rgba(44, 32, 17, 0.8);
 }
 
 .guardian-shield-left {
@@ -237,81 +236,29 @@ body {
   animation: guardianShieldRight 9s ease-in-out infinite;
 }
 
-.shield-perimeter {
+.shield-inset {
   position: absolute;
-  inset: 12px 9px 16px;
+  inset: 25% 21% 24%;
   z-index: 1;
-  color: #fff4c4;
-  font-family: "Courier New", monospace;
-  font-size: clamp(0.34rem, 0.52vw, 0.56rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-shadow: 0 0 4px #fff, 0 0 9px #ffd86f, 0 0 17px rgba(255, 170, 61, 0.9);
-  animation: scriptGlow 2.8s ease-in-out infinite alternate;
-}
-
-.shield-perimeter span {
-  position: absolute;
-  white-space: nowrap;
-}
-
-.shield-text-top {
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.shield-text-left {
-  left: -25px;
-  top: 48%;
-  transform: rotate(-78deg);
-  transform-origin: center;
-}
-
-.shield-text-right {
-  right: -25px;
-  top: 48%;
-  transform: rotate(78deg);
-  transform-origin: center;
-}
-
-.shield-text-bottom {
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%) rotate(180deg);
-}
-
-.shield-text-left,
-.shield-text-right {
-  color: #d6f5ff;
-  text-shadow: 0 0 4px #fff, 0 0 10px #8edfff, 0 0 18px rgba(96, 197, 255, 0.86);
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(203, 164, 83, 0.92);
+  border-radius: 12% 12% 44% 44% / 8% 8% 72% 72%;
+  clip-path: polygon(50% 0, 96% 8%, 91% 69%, 50% 100%, 9% 69%, 4% 8%);
+  background: radial-gradient(circle at 50% 42%, rgba(255, 218, 124, 0.22), transparent 34%), #090909;
+  box-shadow: inset 0 0 15px rgba(255, 206, 108, 0.24), 0 0 10px rgba(255, 191, 77, 0.28);
 }
 
 .shield-crest {
-  position: absolute;
+  position: relative;
   z-index: 2;
   color: #fff3c6;
   font-family: Georgia, serif;
-  font-size: clamp(2rem, 3vw, 3.4rem);
+  font-size: clamp(2.2rem, 3.4vw, 4rem);
   line-height: 1;
-  text-shadow: 0 0 4px #fff, 0 0 12px #f2c96e, 0 0 24px rgba(255, 165, 58, 0.78);
-  transform: translateY(8px);
-  opacity: 0.92;
-}
-
-.shield-perimeter span:nth-child(2),
-.shield-perimeter span:nth-child(3) {
-  letter-spacing: 0.12em;
-}
-
-.shield-perimeter span:nth-child(1),
-.shield-perimeter span:nth-child(4) {
-  color: #fff4c4;
-}
-
-.shield-perimeter span {
-  color: #fff4c4;
+  text-shadow: 0 0 4px #fff, 0 0 12px #f2c96e, 0 0 24px rgba(255, 165, 58, 0.9);
+  transform: translateY(3px);
+  opacity: 0.98;
 }
 
 @keyframes guardianShieldLeft {
@@ -721,6 +668,7 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   min-height: 34px;
+  gap: 6px;
   cursor: grab;
   touch-action: none;
 }
@@ -737,7 +685,8 @@ body {
   letter-spacing: 0.08em;
 }
 
-.pause-button {
+.pause-button,
+.music-button {
   border: 1px solid rgba(123, 241, 179, 0.38);
   background: rgba(123, 241, 179, 0.12);
   color: #eafdf3;
@@ -749,7 +698,27 @@ body {
   cursor: pointer;
 }
 
-.pause-button:hover {
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #9bffd0;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+#musicVolume {
+  width: clamp(46px, 6vw, 86px);
+  height: 14px;
+  margin: 0;
+  accent-color: var(--success-green);
+  cursor: pointer;
+}
+
+.pause-button:hover,
+.music-button:hover {
   background: rgba(123, 241, 179, 0.2);
 }
 
@@ -1118,7 +1087,9 @@ body {
   .camera-panel { top: auto; right: max(8px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(58vw, 320px); min-width: 220px; }
   .camera-header { padding: 6px 8px; font-size: 0.5rem; }
   .tracking-status { display: none; }
-  .pause-button { padding: 5px 7px; font-size: 0.5rem; }
+  .pause-button, .music-button { padding: 5px 7px; font-size: 0.5rem; }
+  .volume-control span { display: none; }
+  #musicVolume { width: 44px; }
   .camera-overlay { left: 6px; right: 6px; bottom: 5px; font-size: 0.58rem; }
   .difficulty-options { gap: 6px; }
   .difficulty-button { min-height: 50px; font-size: 0.67rem; }
