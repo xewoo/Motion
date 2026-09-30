@@ -16,14 +16,11 @@ import {
 let FaceLandmarker;
 let FilesetResolver;
 let GestureRecognizer;
-let ObjectDetector;
 const MODEL_URLS = {
   gesture: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
-  object: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float32/1/efficientdet_lite0.tflite",
   face: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
 };
 const VISION_WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm";
-const OBJECT_DETECTION_INTERVAL = 3;
 const FACE_DETECTION_INTERVAL = 2;
 const GESTURE_LABELS_RU = {
   "Open palm": "Открытая ладонь",
@@ -66,13 +63,11 @@ const elements = {
   downloadButton: document.querySelector("#downloadButton"),
   sampleLabel: document.querySelector("#sampleLabel"),
   sampleCount: document.querySelector("#sampleCount"),
-  objectsToggle: document.querySelector("#objectsToggle"),
   facesToggle: document.querySelector("#facesToggle"),
   meshToggle: document.querySelector("#meshToggle"),
   gestureValue: document.querySelector("#gestureValue"),
   gestureDetail: document.querySelector("#gestureDetail"),
   handsValue: document.querySelector("#handsValue"),
-  objectsValue: document.querySelector("#objectsValue"),
   facesValue: document.querySelector("#facesValue"),
   fpsValue: document.querySelector("#fpsValue"),
 };
@@ -82,14 +77,12 @@ const recognitionState = createRecognitionState();
 const datasetRows = [];
 let cameraStream = null;
 let gestureRecognizer = null;
-let objectDetector = null;
 let faceLandmarker = null;
 let animationFrame = null;
 let lastVideoTime = -1;
 let lastTimestamp = -1;
 let frameCount = 0;
 let currentResult = null;
-let objectDetections = [];
 let faceResult = null;
 let intervalStarted = performance.now();
 let processedFrames = 0;
@@ -120,7 +113,6 @@ function setRunning(running) {
 function closeVisionTasks() {
   for (const [name, task] of [
     ["Gesture Recognizer", gestureRecognizer],
-    ["Object Detector", objectDetector],
     ["Face Landmarker", faceLandmarker],
   ]) {
     if (task) {
@@ -132,13 +124,12 @@ function closeVisionTasks() {
     }
   }
   gestureRecognizer = null;
-  objectDetector = null;
   faceLandmarker = null;
 }
 
 async function createVisionTasks() {
   setStatus("Загружаем модели распознавания…");
-  ({ FaceLandmarker, FilesetResolver, GestureRecognizer, ObjectDetector } = await import(
+  ({ FaceLandmarker, FilesetResolver, GestureRecognizer } = await import(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs"
   ));
   const vision = await FilesetResolver.forVisionTasks(VISION_WASM_URL);
@@ -150,12 +141,6 @@ async function createVisionTasks() {
     minHandPresenceConfidence: 0.5,
     minTrackingConfidence: 0.5,
     cannedGesturesClassifierOptions: { maxResults: 8, scoreThreshold: 0.15 },
-  });
-  objectDetector = await ObjectDetector.createFromOptions(vision, {
-    baseOptions: { modelAssetPath: MODEL_URLS.object },
-    runningMode: "VIDEO",
-    maxResults: 5,
-    scoreThreshold: 0.45,
   });
   faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
     baseOptions: { modelAssetPath: MODEL_URLS.face },
@@ -214,7 +199,6 @@ function stopCamera(message = "Камера выключена.") {
   closeVisionTasks();
   context.clearRect(0, 0, elements.overlay.width, elements.overlay.height);
   currentResult = null;
-  objectDetections = [];
   faceResult = null;
   resetCameraZoom();
   updateSummary(null);
@@ -278,11 +262,6 @@ function processFrame(now) {
       const timestamp = Math.max(Math.floor(now), lastTimestamp + 1);
       lastTimestamp = timestamp;
       currentResult = gestureRecognizer.recognizeForVideo(elements.camera, timestamp);
-      if (elements.objectsToggle.checked && frameCount % OBJECT_DETECTION_INTERVAL === 0) {
-        objectDetections = objectDetector.detectForVideo(elements.camera, timestamp).detections;
-      } else if (!elements.objectsToggle.checked) {
-        objectDetections = [];
-      }
       if (elements.facesToggle.checked && frameCount % FACE_DETECTION_INTERVAL === 0) {
         faceResult = faceLandmarker.detectForVideo(elements.camera, timestamp);
       } else if (!elements.facesToggle.checked) {
@@ -363,7 +342,6 @@ function drawFrame(result, sixSevenScore, grabbingScores) {
     drawCanvasLabel(labelText, left, top - 8 * scale, "#267642", scale, width, height);
   });
 
-  if (elements.objectsToggle.checked) drawObjects(objectDetections, width, height, scale);
   if (elements.facesToggle.checked && faceResult) drawFaces(faceResult, scale, width, height);
 }
 
@@ -386,30 +364,6 @@ function drawCanvasLabel(text, x, baselineY, background, scale, width, height) {
   context.textBaseline = "middle";
   context.fillText(text, left + paddingX, top + boxHeight / 2);
   context.restore();
-}
-
-function drawObjects(detections, width, height, scale) {
-  context.lineWidth = 2 * scale;
-  for (const detection of detections) {
-    const box = detection.boundingBox;
-    const left = Math.max(0, box.originX);
-    const top = Math.max(0, box.originY);
-    const right = Math.min(width, left + box.width);
-    const bottom = Math.min(height, top + box.height);
-    context.strokeStyle = "#f5be60";
-    context.strokeRect(left, top, right - left, bottom - top);
-    const category = detection.categories?.[0];
-    const name = category?.displayName || category?.categoryName || "Объект";
-    drawCanvasLabel(
-      `${name} ${Math.round((category?.score ?? 0) * 100)}%`,
-      width - right,
-      top - 5 * scale,
-      "#aa5f14",
-      scale,
-      width,
-      height,
-    );
-  }
 }
 
 function drawFaces(result, scale, width, height) {
@@ -459,7 +413,6 @@ function drawFaces(result, scale, width, height) {
 function updateSummary(result, sixSevenScore = null, grabbingScores = []) {
   const hands = result?.landmarks ?? [];
   elements.handsValue.textContent = String(hands.length);
-  elements.objectsValue.textContent = String(elements.objectsToggle.checked ? objectDetections.length : 0);
   elements.facesValue.textContent = String(elements.facesToggle.checked ? faceResult?.faceLandmarks?.length ?? 0 : 0);
   if (!hands.length) {
     elements.gestureValue.textContent = "—";
@@ -529,10 +482,6 @@ elements.startButton.addEventListener("click", startCamera);
 elements.stopButton.addEventListener("click", () => stopCamera());
 elements.captureButton.addEventListener("click", captureSamples);
 elements.downloadButton.addEventListener("click", downloadDataset);
-elements.objectsToggle.addEventListener("change", () => {
-  if (!elements.objectsToggle.checked) objectDetections = [];
-  updateSummary(currentResult);
-});
 elements.facesToggle.addEventListener("change", () => {
   if (!elements.facesToggle.checked) faceResult = null;
   updateSummary(currentResult);

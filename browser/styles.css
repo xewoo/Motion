@@ -137,7 +137,6 @@ button, select { font: inherit; }
 .toggle-row > span:first-child { display: inline-flex; align-items: center; gap: 8px; }
 .toggle-subrow { padding-left: 18px; color: #aeb2be; }
 .toggle-dot { width: 7px; height: 7px; border-radius: 50%; }
-.object-dot { background: #ffc06a; }
 .face-dot { background: #71e6cf; }
 .toggle-row input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .toggle-switch { position: relative; width: 29px; height: 16px; border-radius: 9px; background: #3a3e4b; transition: background .15s ease; }
